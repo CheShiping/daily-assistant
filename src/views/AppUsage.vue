@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { Loader2 } from 'lucide-vue-next'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { Loader2, Sparkles, RefreshCw } from 'lucide-vue-next'
 import { Bar, Doughnut } from 'vue-chartjs'
 import {
   Chart,
@@ -20,6 +21,8 @@ interface AppRow {
   lastUsedAt: string | null
 }
 
+const router = useRouter()
+
 const ranges = [
   { k: 'today' as const, l: '今日' },
   { k: 'week' as const, l: '本周' },
@@ -33,6 +36,13 @@ const customEnd = ref('')
 const chartMode = ref<'bar' | 'pie'>('bar')
 const loading = ref(false)
 const items = ref<AppRow[]>([])
+
+// AI 洞察
+const insightText = ref('')
+const insightLoading = ref(false)
+const insightCache = new Map<string, string>()
+let insightUnsub: (() => void) | null = null
+let insightStatusUnsub: (() => void) | null = null
 
 function formatDuration(sec: number): string {
   if (sec < 60) return `${sec}秒`
@@ -99,6 +109,61 @@ async function load() {
   } finally {
     loading.value = false
   }
+  loadInsight()
+}
+
+// AI 洞察
+function insightCacheKey(): string {
+  return `${range.value}_${customStart.value}_${customEnd.value}`
+}
+
+async function loadInsight() {
+  if (items.value.length === 0) {
+    insightText.value = ''
+    return
+  }
+  const key = insightCacheKey()
+  if (insightCache.has(key)) {
+    insightText.value = insightCache.get(key)!
+    return
+  }
+  insightLoading.value = true
+  insightText.value = ''
+  insightUnsub?.()
+  insightStatusUnsub?.()
+  insightUnsub = window.api.ai.onInsightStreamChunk((data) => {
+    if (data.type === 'appUsage') insightText.value += data.chunk
+  })
+  insightStatusUnsub = window.api.ai.onInsightStatusChanged((data) => {
+    if (data.type !== 'appUsage') return
+    if (data.status === 'completed') {
+      insightLoading.value = false
+      if (data.content) {
+        insightText.value = data.content
+        insightCache.set(key, data.content)
+      }
+    } else if (data.status === 'failed') {
+      insightLoading.value = false
+      insightText.value = '生成失败：' + (data.error ?? '未知错误')
+    }
+  })
+  try {
+    // 只传 Top 10 应用，避免 prompt 过长
+    const payload = items.value.slice(0, 10).map(a => ({
+      appName: a.appName,
+      durationMinutes: Math.round(a.durationSec / 60)
+    }))
+    await window.api.ai.generateInsight({ type: 'appUsage', data: payload })
+  } catch (e: any) {
+    insightLoading.value = false
+    insightText.value = '生成失败：' + (e.message ?? '未知错误')
+  }
+}
+
+function refreshInsight() {
+  insightCache.delete(insightCacheKey())
+  insightText.value = ''
+  loadInsight()
 }
 
 watch(range, (r) => {
@@ -107,6 +172,11 @@ watch(range, (r) => {
 
 onMounted(() => {
   load()
+})
+
+onUnmounted(() => {
+  insightUnsub?.()
+  insightStatusUnsub?.()
 })
 
 const topApps = computed(() => items.value.slice(0, 20))
@@ -294,6 +364,32 @@ const pieOptions: ChartOptions<'doughnut'> = {
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- AI 洞察 -->
+    <div v-if="!loading && items.length > 0" class="card p-4 mt-6">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-1.5 text-sm font-medium">
+          <Sparkles class="w-4 h-4 text-primary" />
+          AI 洞察
+        </div>
+        <button
+          class="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1 disabled:opacity-50"
+          :disabled="insightLoading"
+          @click="refreshInsight"
+        >
+          <RefreshCw class="w-3 h-3" :class="insightLoading ? 'animate-spin' : ''" />
+          刷新
+        </button>
+      </div>
+      <div v-if="insightLoading && !insightText" class="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 class="w-3.5 h-3.5 animate-spin" /> 正在分析你的时间分配...
+      </div>
+      <p v-else class="text-sm text-foreground/80 leading-relaxed">{{ insightText || '点击刷新生成洞察' }}</p>
+      <button
+        class="text-xs text-primary hover:underline mt-3"
+        @click="router.push('/agent')"
+      >展开详细分析 →</button>
     </div>
   </div>
 </template>

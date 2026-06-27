@@ -35,6 +35,7 @@ export interface ReportTemplate {
   type: 'daily' | 'weekly' | 'monthly'
   content: string
   isBuiltin: boolean
+  clustering: 'timeline' | 'category' | 'project'
   createdAt: string
   updatedAt: string
 }
@@ -58,6 +59,16 @@ export interface AppUsageRecord {
   createdAt: string
 }
 
+export interface PlanItem {
+  id: string
+  date: string
+  text: string
+  completed: boolean
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface DBSchema {
   version: number
   workRecords: WorkRecord[]
@@ -65,6 +76,7 @@ export interface DBSchema {
   templates: ReportTemplate[]
   screenshots: Screenshot[]
   appUsageRecords: AppUsageRecord[]
+  planItems: PlanItem[]
   settings: Record<string, string>
 }
 
@@ -75,12 +87,17 @@ const DEFAULTS: DBSchema = {
   templates: [],
   screenshots: [],
   appUsageRecords: [],
+  planItems: [],
   settings: {}
 }
 
 let dbPath = ''
 let data: DBSchema | null = null
 let saveTimer: NodeJS.Timeout | null = null
+
+function localDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 export function getDb(): DBSchema {
   if (data) return data
@@ -97,16 +114,82 @@ export function getDb(): DBSchema {
   } else {
     d = { ...DEFAULTS }
   }
+
+  // v1→v2 迁移
+  if (d.version < 2) {
+    // 补模板 clustering 字段
+    for (const t of d.templates) {
+      if (!(t as any).clustering) (t as any).clustering = 'timeline'
+    }
+    // 补默认设置
+    const defaults: Record<string, string> = {
+      autoDeleteScreenshots: 'true',
+      sensitiveSceneSkip: 'true',
+      privacyLevel: 'standard',
+      globalShortcut: 'Ctrl+Shift+J',
+      showNotifications: 'true',
+      subscription: 'free',
+      localApiEnabled: 'false',
+      localApiPort: '8088',
+      localApiToken: ''
+    }
+    for (const [key, val] of Object.entries(defaults)) {
+      if (!d.settings[key]) d.settings[key] = val
+    }
+    d.version = 2
+  }
+
   // 初始化内置模板
   if (d.templates.filter(t => t.isBuiltin).length === 0) {
     const now = new Date().toISOString()
-    d.templates.push(
+    const builtinTemplates: ReportTemplate[] = [
       {
         id: 'tpl-daily-default',
         name: '标准日报模板',
         type: 'daily',
         content: '# {{日期}} 工作日报\n\n## 今日完成\n{{今日完成}}\n\n## 关键数据\n{{关键数据}}\n\n## 遇到的问题\n{{遇到的问题}}\n\n## 明日计划\n{{明日计划}}',
         isBuiltin: true,
+        clustering: 'timeline',
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: 'tpl-daily-simple',
+        name: '简洁日报',
+        type: 'daily',
+        content: '# {{日期}} 工作日报\n\n## 已完成\n{{今日完成}}\n\n## 未完成\n{{遇到的问题}}\n\n## 明日计划\n{{明日计划}}',
+        isBuiltin: true,
+        clustering: 'category',
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: 'tpl-daily-tech',
+        name: '技术日报',
+        type: 'daily',
+        content: '# {{日期}} 技术日报\n\n## 开发进展\n{{今日完成}}\n\n## 技术问题与解决方案\n{{关键数据}}\n\n## 代码质量\n{{遇到的问题}}\n\n## 明日技术计划\n{{明日计划}}',
+        isBuiltin: true,
+        clustering: 'category',
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: 'tpl-daily-project',
+        name: '项目日报',
+        type: 'daily',
+        content: '# {{日期}} 项目日报\n\n## 项目进展\n{{今日完成}}\n\n## 里程碑状态\n{{关键数据}}\n\n## 风险与阻塞\n{{遇到的问题}}\n\n## 下一步\n{{明日计划}}',
+        isBuiltin: true,
+        clustering: 'project',
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: 'tpl-daily-pomodoro',
+        name: '番茄钟聚类',
+        type: 'daily',
+        content: '# {{日期}} 工作日报\n\n## 工作时间块\n{{今日完成}}\n\n## 效率分析\n{{关键数据}}\n\n## 明日计划\n{{明日计划}}',
+        isBuiltin: true,
+        clustering: 'timeline',
         createdAt: now,
         updatedAt: now
       },
@@ -116,6 +199,7 @@ export function getDb(): DBSchema {
         type: 'weekly',
         content: '# {{起始}} - {{结束}} 工作周报\n\n## 本周完成\n{{本周完成}}\n\n## 关键成果\n{{关键成果}}\n\n## 问题与风险\n{{问题与风险}}\n\n## 下周计划\n{{下周计划}}',
         isBuiltin: true,
+        clustering: 'timeline',
         createdAt: now,
         updatedAt: now
       },
@@ -125,11 +209,69 @@ export function getDb(): DBSchema {
         type: 'monthly',
         content: '# {{月份}} 工作月报\n\n## 本月完成\n{{本月完成}}\n\n## 关键数据\n{{关键数据}}\n\n## 复盘与改进\n{{复盘与改进}}\n\n## 下月计划\n{{下月计划}}',
         isBuiltin: true,
+        clustering: 'timeline',
         createdAt: now,
         updatedAt: now
       }
-    )
+    ]
+    // 只添加不存在的模板（避免重复 seed）
+    for (const t of builtinTemplates) {
+      if (!d.templates.find(x => x.id === t.id)) d.templates.push(t)
+    }
     save()
+  } else {
+    // 已有内置模板，补全可能缺失的新模板
+    const now = new Date().toISOString()
+    const builtinToAdd: ReportTemplate[] = [
+      {
+        id: 'tpl-daily-simple',
+        name: '简洁日报',
+        type: 'daily',
+        content: '# {{日期}} 工作日报\n\n## 已完成\n{{今日完成}}\n\n## 未完成\n{{遇到的问题}}\n\n## 明日计划\n{{明日计划}}',
+        isBuiltin: true,
+        clustering: 'category',
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: 'tpl-daily-tech',
+        name: '技术日报',
+        type: 'daily',
+        content: '# {{日期}} 技术日报\n\n## 开发进展\n{{今日完成}}\n\n## 技术问题与解决方案\n{{关键数据}}\n\n## 代码质量\n{{遇到的问题}}\n\n## 明日技术计划\n{{明日计划}}',
+        isBuiltin: true,
+        clustering: 'category',
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: 'tpl-daily-project',
+        name: '项目日报',
+        type: 'daily',
+        content: '# {{日期}} 项目日报\n\n## 项目进展\n{{今日完成}}\n\n## 里程碑状态\n{{关键数据}}\n\n## 风险与阻塞\n{{遇到的问题}}\n\n## 下一步\n{{明日计划}}',
+        isBuiltin: true,
+        clustering: 'project',
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: 'tpl-daily-pomodoro',
+        name: '番茄钟聚类',
+        type: 'daily',
+        content: '# {{日期}} 工作日报\n\n## 工作时间块\n{{今日完成}}\n\n## 效率分析\n{{关键数据}}\n\n## 明日计划\n{{明日计划}}',
+        isBuiltin: true,
+        clustering: 'timeline',
+        createdAt: now,
+        updatedAt: now
+      }
+    ]
+    let added = false
+    for (const t of builtinToAdd) {
+      if (!d.templates.find(x => x.id === t.id)) {
+        d.templates.push(t)
+        added = true
+      }
+    }
+    if (added) save()
   }
   data = d
   return d
@@ -279,7 +421,7 @@ export function listTemplates(type?: string): ReportTemplate[] {
   return rows
 }
 
-export function createTemplate(input: { name: string; type: string; content: string }): ReportTemplate {
+export function createTemplate(input: { name: string; type: string; content: string; clustering?: 'timeline' | 'category' | 'project' }): ReportTemplate {
   const db = getDb()
   const now = new Date().toISOString()
   const t: ReportTemplate = {
@@ -288,6 +430,7 @@ export function createTemplate(input: { name: string; type: string; content: str
     type: input.type as ReportTemplate['type'],
     content: input.content,
     isBuiltin: false,
+    clustering: input.clustering || 'timeline',
     createdAt: now,
     updatedAt: now
   }
@@ -372,7 +515,7 @@ export function timeline(opts: { startDate?: string; endDate?: string } = {}): W
     rows = rows.filter(r => r.startedAt >= opts.startDate! && r.startedAt <= opts.endDate!)
   } else {
     // 默认今天
-    const todayStr = new Date().toISOString().slice(0, 10)
+    const todayStr = localDate(new Date())
     rows = rows.filter(r => r.startedAt.slice(0, 10) === todayStr)
   }
   rows.sort((a, b) => a.startedAt.localeCompare(b.startedAt))
@@ -394,7 +537,7 @@ export function heatmap(opts: { startDate?: string; endDate?: string } = {}): Ar
   const map = new Map<string, number>()
   for (const r of rows) {
     const d = new Date(r.startedAt)
-    const dateStr = d.toISOString().slice(0, 10)
+    const dateStr = localDate(d)
     const hour = d.getHours()
     const key = `${dateStr}_${hour}`
     map.set(key, (map.get(key) ?? 0) + 1)
@@ -402,7 +545,7 @@ export function heatmap(opts: { startDate?: string; endDate?: string } = {}): Ar
   const result: Array<{ date: string; hour: number; count: number }> = []
   const cur = new Date(start)
   while (cur <= end) {
-    const dateStr = cur.toISOString().slice(0, 10)
+    const dateStr = localDate(cur)
     for (let h = 0; h < 24; h++) {
       const key = `${dateStr}_${h}`
       result.push({ date: dateStr, hour: h, count: map.get(key) ?? 0 })
@@ -435,7 +578,7 @@ export function appUsage(opts: { startDate?: string; endDate?: string } = {}): A
   if (opts.startDate && opts.endDate) {
     rows = rows.filter(r => r.startedAt >= opts.startDate! && r.startedAt <= opts.endDate!)
   } else {
-    const todayStr = new Date().toISOString().slice(0, 10)
+    const todayStr = localDate(new Date())
     rows = rows.filter(r => r.startedAt.slice(0, 10) === todayStr)
   }
   const map = new Map<string, { durationSec: number; count: number; firstAt: string | null; lastAt: string | null }>()
@@ -452,6 +595,51 @@ export function appUsage(opts: { startDate?: string; endDate?: string } = {}): A
     .sort((a, b) => b.durationSec - a.durationSec)
   const total = list.reduce((s, x) => s + x.durationSec, 0)
   return list.map(x => ({ ...x, share: total > 0 ? +(x.durationSec / total * 100).toFixed(1) : 0 }))
+}
+
+// ============ 计划 ============
+export function listPlans(opts: { date: string }): PlanItem[] {
+  const db = getDb()
+  return db.planItems
+    .filter(p => p.date === opts.date)
+    .sort((a, b) => a.order - b.order)
+}
+
+export function createPlan(input: { date: string; text: string }): PlanItem {
+  const db = getDb()
+  const now = new Date().toISOString()
+  const existing = db.planItems.filter(p => p.date === input.date)
+  const maxOrder = existing.length > 0 ? Math.max(...existing.map(p => p.order)) : 0
+  const plan: PlanItem = {
+    id: cryptoRandom(),
+    date: input.date,
+    text: input.text,
+    completed: false,
+    order: maxOrder + 1,
+    createdAt: now,
+    updatedAt: now
+  }
+  db.planItems.push(plan)
+  save()
+  return plan
+}
+
+export function updatePlan(input: { id: string; text?: string; completed?: boolean; order?: number }): PlanItem {
+  const db = getDb()
+  const p = db.planItems.find(x => x.id === input.id)
+  if (!p) throw new Error('计划不存在')
+  if (input.text !== undefined) p.text = input.text
+  if (input.completed !== undefined) p.completed = input.completed
+  if (input.order !== undefined) p.order = input.order
+  p.updatedAt = new Date().toISOString()
+  save()
+  return p
+}
+
+export function deletePlan(id: string): void {
+  const db = getDb()
+  db.planItems = db.planItems.filter(p => p.id !== id)
+  save()
 }
 
 // ============ 数据管理 ============

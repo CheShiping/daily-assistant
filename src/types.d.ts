@@ -12,6 +12,17 @@ export interface AppSettings {
   memoryContent: string
   customInstruction: string
   preservePath: string
+  autoDeleteScreenshots: boolean
+  sensitiveSceneSkip: boolean
+  privacyLevel: 'loose' | 'standard' | 'strict'
+  globalShortcut: string
+  showNotifications: boolean
+  subscription: 'free' | 'pro'
+  subscriptionExpiry: string | null
+  inviteCode: string
+  localApiEnabled: boolean
+  localApiPort: number
+  localApiToken: string
 }
 
 export interface WorkRecord {
@@ -46,6 +57,7 @@ export interface ReportTemplate {
   type: 'daily' | 'weekly' | 'monthly'
   content: string
   isBuiltin: boolean
+  clustering: 'timeline' | 'category' | 'project'
   createdAt: string
   updatedAt: string
 }
@@ -58,6 +70,16 @@ export interface Screenshot {
   appName: string | null
   analyzed: boolean
   createdAt: string
+}
+
+export interface PlanItem {
+  id: string
+  date: string
+  text: string
+  completed: boolean
+  order: number
+  createdAt: string
+  updatedAt: string
 }
 
 interface Api {
@@ -79,14 +101,22 @@ interface Api {
       templateBody?: string
       customInstruction?: string
       memoryContent?: string
+      clustering?: 'timeline' | 'category' | 'project'
+      plans?: Array<{ text: string; completed: boolean }>
       records: Array<{ startedAt: string; summary: string; category?: string }>
       appUsageSummary?: Array<{ appName: string; durationMinutes: number }>
     }): Promise<{ id: string }>
     generateTemplate(input: { reference: string; requirements: string; type: 'daily' | 'weekly' | 'monthly' }): Promise<{ started: boolean }>
+    chat(input: { messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>; sessionId: string }): Promise<{ ok: boolean; error?: string }>
     onReportStreamChunk(cb: (data: { id: string; chunk: string }) => void): () => void
     onReportStatusChanged(cb: (data: any) => void): () => void
     onTemplateStreamChunk(cb: (data: { chunk: string }) => void): () => void
     onTemplateStatusChanged(cb: (data: any) => void): () => void
+    onChatStreamChunk(cb: (data: { sessionId: string; chunk: string }) => void): () => void
+    onChatStatusChanged(cb: (data: { sessionId: string; status: 'completed' | 'failed'; content?: string; error?: string }) => void): () => void
+    generateInsight(input: { type: 'heatmap' | 'appUsage'; data: any }): Promise<{ ok: boolean; error?: string }>
+    onInsightStreamChunk(cb: (data: { type: string; chunk: string }) => void): () => void
+    onInsightStatusChanged(cb: (data: { type: string; status: 'completed' | 'failed'; content?: string; error?: string }) => void): () => void
   }
   workRecords: {
     list(input: { date?: string; startDate?: string; endDate?: string; limit?: number; offset?: number }): Promise<WorkRecord[]>
@@ -104,9 +134,21 @@ interface Api {
   }
   reportTemplates: {
     list(type?: string): Promise<ReportTemplate[]>
-    create(input: { name: string; type: string; content: string }): Promise<ReportTemplate>
+    create(input: { name: string; type: string; content: string; clustering?: 'timeline' | 'category' | 'project' }): Promise<ReportTemplate>
     update(input: { id: string; name?: string; content?: string }): Promise<ReportTemplate>
     delete(id: string): Promise<{ ok: boolean }>
+  }
+  plans: {
+    list(input: { date: string }): Promise<PlanItem[]>
+    create(input: { date: string; text: string }): Promise<PlanItem>
+    update(input: { id: string; text?: string; completed?: boolean; order?: number }): Promise<PlanItem>
+    delete(id: string): Promise<{ ok: boolean }>
+  }
+  localApi: {
+    getStatus(): Promise<{ running: boolean; port: number; token: string }>
+    start(input: { port?: number }): Promise<{ ok: boolean; error?: string; port?: number }>
+    stop(): Promise<{ ok: boolean }>
+    regenerateToken(): Promise<{ ok: boolean; token: string }>
   }
   screenshots: {
     status(): Promise<{ running: boolean }>

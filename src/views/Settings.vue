@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, defineComponent, h } from 'vue'
+import { ref, onMounted, defineComponent, h, computed } from 'vue'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 import type { AppSettings } from '@/types'
 import {
   Loader2, CheckCircle2, XCircle, Eye, EyeOff,
   Settings as SettingsIcon, Camera, Brain, Database, Sparkles,
-  Trash2, Download, Upload, ChevronDown, Wand2, Languages, Clock
+  Trash2, Download, Upload, ChevronDown, Wand2, Languages, Clock,
+  Shield, Bell, Keyboard, FlaskConical, Copy, Check, RefreshCw, Crown, Power
 } from 'lucide-vue-next'
 
 // Switch 自定义控件
@@ -43,6 +44,12 @@ const testing = ref(false)
 const testResult = ref<{ ok: boolean; message: string } | null>(null)
 const excludedAppsText = ref('')
 
+const privacyLevels = [
+  { label: '宽松', value: 'loose', desc: '记录所有内容' },
+  { label: '标准', value: 'standard', desc: '跳过敏感场景' },
+  { label: '严格', value: 'strict', desc: '仅记录工作应用' }
+]
+
 const intervalOpen = ref(false)
 const screenshotIntervals = [
   { label: '1 分钟', value: 60 },
@@ -52,11 +59,28 @@ const screenshotIntervals = [
   { label: '20 分钟', value: 1200 }
 ]
 
+// 截图运行状态（自动记录开关）
+const screenshotRunning = ref(false)
+
+// 数据清除内联确认
+const clearConfirming = ref(false)
+const clearing = ref(false)
+
+// 本地 API
+const apiStatus = ref<{ running: boolean; port: number; token: string } | null>(null)
+const apiPortDraft = ref(8088)
+const apiToggling = ref(false)
+const apiTokenCopied = ref(false)
+const apiConfigCopied = ref(false)
+
 async function load() {
   loading.value = true
   settings.value = await window.api.settings.get()
   excludedAppsText.value = (settings.value.excludedApps ?? []).join('\n')
+  apiPortDraft.value = settings.value.localApiPort || 8088
   loading.value = false
+  refreshScreenshotStatus()
+  refreshApiStatus()
 }
 
 async function save() {
@@ -118,15 +142,118 @@ function currentIntervalLabel() {
   return m < 1 ? `${s} 秒` : `${m} 分钟`
 }
 
-async function clearData() {
-  if (!confirm('确认清空所有本地数据？此操作不可恢复')) return
-  await window.api.dataManagement.clear()
-  alert('已清空')
+// 自动记录开关
+async function refreshScreenshotStatus() {
+  try {
+    const r = await window.api.screenshots.status()
+    screenshotRunning.value = r.running
+  } catch {}
 }
+
+async function toggleAutoRecord(v: boolean) {
+  try {
+    if (v) await window.api.screenshots.start()
+    else await window.api.screenshots.stop()
+    screenshotRunning.value = v
+  } catch {
+    refreshScreenshotStatus()
+  }
+}
+
+// 数据清除
+async function clearData() {
+  clearing.value = true
+  try {
+    await window.api.dataManagement.clear()
+    clearConfirming.value = false
+    alert('已清空所有本地数据')
+  } finally {
+    clearing.value = false
+  }
+}
+
 async function exportData() { await window.api.dataManagement.export() }
 async function importData() {
   const r = await window.api.dataManagement.import()
   if (r.ok) alert('导入成功')
+}
+
+// 本地 API
+async function refreshApiStatus() {
+  try {
+    apiStatus.value = await window.api.localApi.getStatus()
+    apiPortDraft.value = apiStatus.value.port || settings.value?.localApiPort || 8088
+  } catch {}
+}
+
+async function toggleLocalApi(v: boolean) {
+  apiToggling.value = true
+  try {
+    if (v) {
+      await window.api.settings.update({ localApiPort: apiPortDraft.value })
+      const r = await window.api.localApi.start({ port: apiPortDraft.value })
+      if (!r.ok) alert('启动失败：' + (r.error ?? '未知错误'))
+    } else {
+      await window.api.localApi.stop()
+    }
+    await refreshApiStatus()
+  } finally {
+    apiToggling.value = false
+  }
+}
+
+async function applyApiPort() {
+  await window.api.settings.update({ localApiPort: apiPortDraft.value })
+  if (apiStatus.value?.running) {
+    // 重启以应用新端口
+    await window.api.localApi.stop()
+    await window.api.localApi.start({ port: apiPortDraft.value })
+    await refreshApiStatus()
+  }
+}
+
+async function regenerateToken() {
+  if (!confirm('重置 Token 后，原 Token 将立即失效，已有接入需重新配置。确认重置？')) return
+  const r = await window.api.localApi.regenerateToken()
+  if (r.ok) await refreshApiStatus()
+}
+
+const apiConfigText = computed(() => {
+  const port = apiStatus.value?.port || apiPortDraft.value
+  const token = apiStatus.value?.token || settings.value?.localApiToken || ''
+  return `# 牙牙乐日报助手 - 本地 API 接入配置
+Base URL: http://localhost:${port}
+认证方式: Bearer Token
+Token: ${token}
+
+# 常用端点
+GET  /                     # API 文档（Markdown）
+GET  /api/work-records     # 工作记录
+GET  /api/reports          # 报告列表
+GET  /api/app-usage        # 应用使用时长
+GET  /api/heatmap          # 热力图数据
+GET  /api/timeline         # 时间线
+GET  /api/plans            # 今日计划
+POST /api/work-records     # 创建工作记录
+POST /api/reports/generate # 生成报告
+
+# 调用示例
+curl -H "Authorization: Bearer ${token}" http://localhost:${port}/api/work-records`
+})
+
+async function copyText(text: string, flag: 'token' | 'config') {
+  try {
+    await navigator.clipboard.writeText(text)
+    if (flag === 'token') {
+      apiTokenCopied.value = true
+      setTimeout(() => (apiTokenCopied.value = false), 1500)
+    } else {
+      apiConfigCopied.value = true
+      setTimeout(() => (apiConfigCopied.value = false), 1500)
+    }
+  } catch {
+    alert('复制失败，请手动选择复制')
+  }
 }
 
 onMounted(load)
@@ -142,7 +269,7 @@ onMounted(load)
 
     <div v-else-if="settings" class="space-y-4">
 
-      <!-- 通用 -->
+      <!-- 卡片 1：通用 -->
       <section class="card overflow-hidden">
         <div class="px-5 pt-4 pb-2 text-sm font-semibold flex items-center gap-2">
           <SettingsIcon class="w-4 h-4 text-muted-foreground" /> 通用
@@ -158,14 +285,37 @@ onMounted(load)
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
-            <div class="text-sm font-medium">开机自启动</div>
-            <div class="text-xs text-muted-foreground mt-0.5">登录系统后自动运行</div>
+            <div class="text-sm font-medium">自动记录工作</div>
+            <div class="text-xs text-muted-foreground mt-0.5">开启后定时截图并识别当前工作状态</div>
           </div>
-          <Switch :model-value="false" disabled />
+          <Switch :model-value="screenshotRunning" @update:model-value="toggleAutoRecord" />
+        </div>
+        <div class="px-5 py-3 flex items-center gap-4 border-t">
+          <div class="flex-1">
+            <div class="text-sm font-medium">全局快捷键</div>
+            <div class="text-xs text-muted-foreground mt-0.5">快速记录当前工作状态</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <Keyboard class="w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              v-model="settings.globalShortcut"
+              class="input w-32 text-center"
+              placeholder="Ctrl+Shift+J"
+              @blur="save"
+            />
+          </div>
+        </div>
+        <div class="px-5 py-3 flex items-center gap-4 border-t">
+          <div class="flex-1">
+            <div class="text-sm font-medium">系统通知</div>
+            <div class="text-xs text-muted-foreground mt-0.5">记录成功或跳过时显示通知</div>
+          </div>
+          <Switch v-model="settings.showNotifications" @update:model-value="save" />
         </div>
       </section>
 
-      <!-- 截图与记录 -->
+      <!-- 卡片 2：截图与记录 -->
       <section class="card overflow-hidden">
         <div class="px-5 pt-4 pb-2 text-sm font-semibold flex items-center gap-2">
           <Camera class="w-4 h-4 text-muted-foreground" /> 截图与记录
@@ -191,10 +341,42 @@ onMounted(load)
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
-            <div class="text-sm font-medium">截图保留</div>
-            <div class="text-xs text-muted-foreground mt-0.5">仅保留近 1 天未处理的历史</div>
+            <div class="text-sm font-medium">视觉识别</div>
+            <div class="text-xs text-muted-foreground mt-0.5">使用 AI 视觉模型分析截图内容</div>
           </div>
-          <Switch :model-value="true" disabled />
+          <Switch v-model="settings.visionEnabled" @update:model-value="save" />
+        </div>
+        <div class="px-5 py-3 border-t">
+          <div class="text-sm font-medium mb-1">隐私级别</div>
+          <div class="text-xs text-muted-foreground mb-3">控制截图记录的隐私策略</div>
+          <div class="grid grid-cols-3 gap-3">
+            <button
+              v-for="level in privacyLevels"
+              :key="level.value"
+              class="flex flex-col items-center p-3 rounded-lg border transition-colors"
+              :class="settings.privacyLevel === level.value
+                ? 'border-primary bg-primary/5 text-primary'
+                : 'border-border hover:border-primary/50'"
+              @click="settings.privacyLevel = level.value as any; save()"
+            >
+              <span class="text-sm font-medium">{{ level.label }}</span>
+              <span class="text-xs mt-1 opacity-80">{{ level.desc }}</span>
+            </button>
+          </div>
+        </div>
+        <div class="px-5 py-3 flex items-center gap-4 border-t">
+          <div class="flex-1">
+            <div class="text-sm font-medium">截图分析后自动删除</div>
+            <div class="text-xs text-muted-foreground mt-0.5">AI 分析完成后立即删除本地截图文件</div>
+          </div>
+          <Switch v-model="settings.autoDeleteScreenshots" @update:model-value="save" />
+        </div>
+        <div class="px-5 py-3 flex items-center gap-4 border-t">
+          <div class="flex-1">
+            <div class="text-sm font-medium">敏感场景自动跳过</div>
+            <div class="text-xs text-muted-foreground mt-0.5">自动识别并跳过私人沟通、社交媒体等场景</div>
+          </div>
+          <Switch v-model="settings.sensitiveSceneSkip" @update:model-value="save" />
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
@@ -215,9 +397,16 @@ onMounted(load)
             @change="save"
           ></textarea>
         </div>
+        <div class="px-5 py-3 flex items-center gap-4 border-t">
+          <div class="flex-1">
+            <div class="text-sm font-medium">完成通知</div>
+            <div class="text-xs text-muted-foreground mt-0.5">报告生成、识别完成时弹出系统通知</div>
+          </div>
+          <Switch v-model="settings.showNotifications" @update:model-value="save" />
+        </div>
       </section>
 
-      <!-- AI 分析 -->
+      <!-- 卡片 3：AI 分析 -->
       <section class="card overflow-hidden">
         <div class="px-5 pt-4 pb-2 text-sm font-semibold flex items-center gap-2">
           <Brain class="w-4 h-4 text-muted-foreground" /> AI 分析
@@ -268,13 +457,13 @@ onMounted(load)
           />
         </div>
         <div class="px-5 py-3 border-t">
-            <div class="text-sm font-medium mb-2">报告生成模型</div>
-            <input v-model="settings.model" class="input w-full h-8 font-mono text-xs" @change="save" placeholder="如 gpt-4o、doubao-pro-32k" />
-          </div>
-          <div class="px-5 py-3 border-t">
-            <div class="text-sm font-medium mb-2">截图分析模型</div>
-            <input v-model="settings.visionModel" class="input w-full h-8 font-mono text-xs" @change="save" placeholder="如 gpt-4o、doubao-vision-pro" />
-          </div>
+          <div class="text-sm font-medium mb-2">报告生成模型</div>
+          <input v-model="settings.model" class="input w-full h-8 font-mono text-xs" @change="save" placeholder="如 gpt-4o、doubao-pro-32k" />
+        </div>
+        <div class="px-5 py-3 border-t">
+          <div class="text-sm font-medium mb-2">截图分析模型</div>
+          <input v-model="settings.visionModel" class="input w-full h-8 font-mono text-xs" @change="save" placeholder="如 gpt-4o、doubao-vision-pro" />
+        </div>
         <div class="px-5 py-3 border-t">
           <div class="text-sm font-medium mb-2">自定义指令</div>
           <div class="text-xs text-muted-foreground mb-2">追加到报告生成系统提示词末尾</div>
@@ -285,9 +474,19 @@ onMounted(load)
             @change="save"
           ></textarea>
         </div>
+        <div class="px-5 py-3 border-t">
+          <div class="text-sm font-medium mb-2">AI 记忆内容</div>
+          <div class="text-xs text-muted-foreground mb-2">长期记住的工作背景（项目名、技术栈、协作方式等），生成报告时自动注入</div>
+          <textarea
+            v-model="settings.memoryContent"
+            class="input w-full h-24 text-xs"
+            placeholder="例如：当前负责订单中台后端，技术栈 Java + Spring Cloud，团队使用钉钉协作..."
+            @change="save"
+          ></textarea>
+        </div>
       </section>
 
-      <!-- 数据管理 -->
+      <!-- 卡片 4：数据管理 -->
       <section class="card overflow-hidden">
         <div class="px-5 pt-4 pb-2 text-sm font-semibold flex items-center gap-2">
           <Database class="w-4 h-4 text-muted-foreground" /> 数据管理
@@ -310,21 +509,40 @@ onMounted(load)
             <Upload class="w-3 h-3" /> 导入
           </button>
         </div>
-        <div class="px-5 py-3 flex items-center gap-4 border-t">
-          <div class="flex-1">
-            <div class="text-sm font-medium">清除历史数据</div>
-            <div class="text-xs text-destructive/70 mt-0.5">不可恢复，请谨慎操作</div>
+        <div class="px-5 py-3 border-t">
+          <div v-if="!clearConfirming" class="flex items-center gap-4">
+            <div class="flex-1">
+              <div class="text-sm font-medium">清除历史数据</div>
+              <div class="text-xs text-destructive/70 mt-0.5">不可恢复，请谨慎操作</div>
+            </div>
+            <button class="btn-outline btn-sm text-destructive border-destructive/30 hover:bg-destructive/10 flex items-center gap-1" @click="clearConfirming = true">
+              <Trash2 class="w-3 h-3" /> 删除
+            </button>
           </div>
-          <button class="btn-outline btn-sm text-destructive border-destructive/30 hover:bg-destructive/10 flex items-center gap-1" @click="clearData">
-            <Trash2 class="w-3 h-3" /> 删除
-          </button>
+          <div v-else class="flex items-center gap-2 bg-destructive/5 rounded-md p-3">
+            <Shield class="w-4 h-4 text-destructive flex-shrink-0" />
+            <span class="text-sm text-destructive flex-1">确认清空所有本地数据？此操作不可恢复</span>
+            <button class="btn-ghost btn-sm" :disabled="clearing" @click="clearConfirming = false">取消</button>
+            <button class="btn-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center gap-1" :disabled="clearing" @click="clearData">
+              <Loader2 v-if="clearing" class="w-3 h-3 animate-spin" />
+              <Trash2 v-else class="w-3 h-3" /> 确认删除
+            </button>
+          </div>
         </div>
       </section>
 
-      <!-- 定时日报 -->
+      <!-- 卡片 5：实验 -->
       <section class="card overflow-hidden">
         <div class="px-5 pt-4 pb-2 text-sm font-semibold flex items-center gap-2">
-          <Sparkles class="w-4 h-4 text-muted-foreground" /> 定时日报
+          <FlaskConical class="w-4 h-4 text-muted-foreground" /> 实验
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">实验性</span>
+        </div>
+        <div class="px-5 py-3 flex items-center gap-4 border-t">
+          <div class="flex-1">
+            <div class="text-sm font-medium">开机自启动</div>
+            <div class="text-xs text-muted-foreground mt-0.5">登录系统后自动运行（仅 Windows）</div>
+          </div>
+          <Switch :model-value="false" disabled />
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
@@ -343,6 +561,91 @@ onMounted(load)
               :model-value="settings.scheduledReportEnabled"
               @update:model-value="(v) => saveField('scheduledReportEnabled', v)"
             />
+          </div>
+        </div>
+        <div class="px-5 py-3 flex items-center gap-4 border-t">
+          <div class="flex-1">
+            <div class="text-sm font-medium">截图保留路径</div>
+            <div class="text-xs text-muted-foreground mt-0.5">未开启"截图即销毁"时，截图保存到此目录（留空使用默认）</div>
+          </div>
+          <input
+            v-model="settings.preservePath"
+            class="input h-8 text-xs w-48 font-mono"
+            placeholder="默认路径"
+            @change="saveField('preservePath', settings.preservePath)"
+          />
+        </div>
+        <div class="px-5 py-3 flex items-center gap-4 border-t">
+          <div class="flex-1">
+            <div class="text-sm font-medium">订阅状态</div>
+            <div class="text-xs text-muted-foreground mt-0.5">
+              {{ settings.subscription === 'pro' ? `Pro 版 · 到期 ${settings.subscriptionExpiry ?? '—'}` : '免费版' }}
+            </div>
+          </div>
+          <button class="btn-outline btn-sm flex items-center gap-1" @click="router.push('/subscription')">
+            <Crown class="w-3 h-3" /> {{ settings.subscription === 'pro' ? '管理' : '升级' }}
+          </button>
+        </div>
+
+        <!-- 本地 API 服务 -->
+        <div class="px-5 py-3 border-t">
+          <div class="flex items-center gap-4">
+            <div class="flex-1">
+              <div class="text-sm font-medium flex items-center gap-1.5">
+                <Power class="w-3.5 h-3.5 text-muted-foreground" /> 本地 API 服务
+              </div>
+              <div class="text-xs text-muted-foreground mt-0.5">
+                暴露本地 HTTP API，供外部 Agent / 脚本调用
+                <span v-if="apiStatus?.running" class="text-green-600 ml-1">· 运行中（端口 {{ apiStatus.port }}）</span>
+                <span v-else class="text-muted-foreground ml-1">· 已停止</span>
+              </div>
+            </div>
+            <Switch :model-value="apiStatus?.running ?? false" :disabled="apiToggling" @update:model-value="toggleLocalApi" />
+          </div>
+
+          <div class="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-muted-foreground mb-1 block">端口</label>
+              <div class="flex items-center gap-1">
+                <input
+                  type="number"
+                  v-model="apiPortDraft"
+                  class="input h-8 text-xs w-24 font-mono"
+                  min="1024"
+                  max="65535"
+                  @change="applyApiPort"
+                />
+                <button class="btn-ghost btn-sm" @click="applyApiPort">应用</button>
+              </div>
+            </div>
+            <div>
+              <label class="text-xs text-muted-foreground mb-1 block">Token</label>
+              <div class="flex items-center gap-1">
+                <input
+                  type="text"
+                  readonly
+                  :value="apiStatus?.token || ''"
+                  class="input h-8 text-xs w-32 font-mono"
+                  placeholder="未生成"
+                />
+                <button class="btn-ghost btn-icon btn-sm" @click="copyText(apiStatus?.token || '', 'token')" title="复制 Token">
+                  <Check v-if="apiTokenCopied" class="w-3.5 h-3.5 text-green-500" />
+                  <Copy v-else class="w-3.5 h-3.5" />
+                </button>
+                <button class="btn-ghost btn-icon btn-sm" @click="regenerateToken" title="重置 Token">
+                  <RefreshCw class="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <button class="btn-outline btn-sm flex items-center gap-1" @click="copyText(apiConfigText, 'config')">
+              <Check v-if="apiConfigCopied" class="w-3 h-3 text-green-500" />
+              <Copy v-else class="w-3 h-3" />
+              {{ apiConfigCopied ? '已复制' : '一键复制接入配置' }}
+            </button>
+            <p class="text-[11px] text-muted-foreground mt-1.5">复制后可粘贴给外部 Agent 或脚本，包含 Base URL、Token 和端点说明</p>
           </div>
         </div>
       </section>

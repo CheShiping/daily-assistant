@@ -13,8 +13,30 @@ import {
   PanelLeftClose,
   PanelLeft,
   HelpCircle,
-  Shield
+  Crown,
+  Shield,
+  Gift
 } from 'lucide-vue-next'
+
+function handleKeydown(e: KeyboardEvent) {
+  // 只处理 Enter 键
+  if (e.key !== 'Enter') return
+  
+  // 排除输入框、文本区域、可编辑元素
+  const target = e.target as HTMLElement
+  if (
+    target.tagName === 'INPUT' ||
+    target.tagName === 'TEXTAREA' ||
+    target.isContentEditable ||
+    target.closest('[contenteditable]') ||
+    target.closest('input') ||
+    target.closest('textarea')
+  ) return
+  
+  // 触发快速记录
+  e.preventDefault()
+  window.api.screenshots.captureNow()
+}
 
 const route = useRoute()
 const screenshotRunning = ref(false)
@@ -33,9 +55,11 @@ const mainNav = [
 
 // 更多分组
 const moreNav = [
-  { name: 'privacy', label: '隐私保护', icon: Shield, path: '#' },
+  { name: 'subscription', label: '订阅', icon: Crown, path: '/subscription' },
+  { name: 'invite', label: '邀请有礼', icon: Gift, path: '/invite' },
+  { name: 'privacy', label: '隐私保护', icon: Shield, path: '/privacy' },
   { name: 'settings', label: '设置', icon: SettingsIcon, path: '/settings' },
-  { name: 'help', label: '帮助', icon: HelpCircle, path: '#' }
+  { name: 'help', label: '帮助', icon: HelpCircle, path: '/help' }
 ]
 
 async function checkScreenshotStatus() {
@@ -49,14 +73,16 @@ let statusTimer: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
   checkScreenshotStatus()
   statusTimer = setInterval(checkScreenshotStatus, 3000)
+  document.addEventListener('keydown', handleKeydown)
 })
 onUnmounted(() => {
   if (statusTimer) clearInterval(statusTimer)
+  document.removeEventListener('keydown', handleKeydown)
 })
 
 function toggleCollapse() { collapsed.value = !collapsed.value }
 
-const version = ref('0.1.0')
+const version = ref('2.0.0')
 onMounted(async () => {
   try { version.value = await window.api.getVersion() } catch {}
 })

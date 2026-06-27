@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { formatDate } from '@/lib/utils'
-import { Loader2, Calendar, Activity } from 'lucide-vue-next'
+import { Loader2, Calendar, Activity, Sparkles, RefreshCw } from 'lucide-vue-next'
 
 interface HeatCell {
   date: string
@@ -9,11 +10,20 @@ interface HeatCell {
   count: number
 }
 
+const router = useRouter()
+
 const loading = ref(true)
 const cells = ref<HeatCell[]>([])
 const startDate = ref('')
 const endDate = ref('')
 const showRecentOnly = ref(false) // 显示前两日开关
+
+// AI 洞察
+const insightText = ref('')
+const insightLoading = ref(false)
+const insightCache = new Map<string, string>()
+let insightUnsub: (() => void) | null = null
+let insightStatusUnsub: (() => void) | null = null
 
 function initRange() {
   const end = new Date()
@@ -41,6 +51,56 @@ async function load() {
     endDate: e.toISOString()
   })
   loading.value = false
+  loadInsight()
+}
+
+// AI 洞察
+function insightCacheKey(): string {
+  return `${startDate.value}_${endDate.value}_${showRecentOnly.value ? '1' : '0'}`
+}
+
+async function loadInsight() {
+  if (cells.value.length === 0) {
+    insightText.value = ''
+    return
+  }
+  const key = insightCacheKey()
+  if (insightCache.has(key)) {
+    insightText.value = insightCache.get(key)!
+    return
+  }
+  insightLoading.value = true
+  insightText.value = ''
+  insightUnsub?.()
+  insightStatusUnsub?.()
+  insightUnsub = window.api.ai.onInsightStreamChunk((data) => {
+    if (data.type === 'heatmap') insightText.value += data.chunk
+  })
+  insightStatusUnsub = window.api.ai.onInsightStatusChanged((data) => {
+    if (data.type !== 'heatmap') return
+    if (data.status === 'completed') {
+      insightLoading.value = false
+      if (data.content) {
+        insightText.value = data.content
+        insightCache.set(key, data.content)
+      }
+    } else if (data.status === 'failed') {
+      insightLoading.value = false
+      insightText.value = '生成失败：' + (data.error ?? '未知错误')
+    }
+  })
+  try {
+    await window.api.ai.generateInsight({ type: 'heatmap', data: cells.value })
+  } catch (e: any) {
+    insightLoading.value = false
+    insightText.value = '生成失败：' + (e.message ?? '未知错误')
+  }
+}
+
+function refreshInsight() {
+  insightCache.delete(insightCacheKey())
+  insightText.value = ''
+  loadInsight()
 }
 
 // 监听开关变化重新加载
@@ -74,15 +134,21 @@ function weekOf(dateStr: string): string {
 function cellColor(count: number): string {
   if (count === 0) return 'hsl(var(--muted))'
   const ratio = maxCount.value === 0 ? 0 : count / maxCount.value
-  if (ratio < 0.25) return 'hsl(142 60% 75%)'
-  if (ratio < 0.5) return 'hsl(142 65% 60%)'
-  if (ratio < 0.75) return 'hsl(142 71% 48%)'
-  return 'hsl(142 71% 38%)'
+  if (ratio < 0.2) return 'hsl(142 40% 85%)'
+  if (ratio < 0.4) return 'hsl(142 55% 70%)'
+  if (ratio < 0.6) return 'hsl(142 65% 55%)'
+  if (ratio < 0.8) return 'hsl(142 71% 45%)'
+  return 'hsl(142 71% 35%)'
 }
 
 onMounted(() => {
   initRange()
   load()
+})
+
+onUnmounted(() => {
+  insightUnsub?.()
+  insightStatusUnsub?.()
 })
 </script>
 
@@ -150,7 +216,7 @@ onMounted(() => {
           <div
             v-for="(c, h) in counts"
             :key="h"
-            class="flex-1 h-6 rounded-sm transition-transform hover:scale-110 hover:ring-1 hover:ring-primary cursor-pointer"
+            class="flex-1 h-7 rounded-[3px] transition-all duration-150 hover:scale-125 hover:ring-2 hover:ring-primary/50 cursor-pointer"
             :style="{ backgroundColor: cellColor(c) }"
             :title="`${date} ${h.toString().padStart(2, '0')}:00 · ${c} 条记录`"
           ></div>
@@ -167,6 +233,32 @@ onMounted(() => {
           <span>多</span>
         </div>
       </div>
+    </div>
+
+    <!-- AI 洞察 -->
+    <div v-if="!loading && cells.length > 0" class="card p-4 mt-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-1.5 text-sm font-medium">
+          <Sparkles class="w-4 h-4 text-primary" />
+          AI 洞察
+        </div>
+        <button
+          class="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1 disabled:opacity-50"
+          :disabled="insightLoading"
+          @click="refreshInsight"
+        >
+          <RefreshCw class="w-3 h-3" :class="insightLoading ? 'animate-spin' : ''" />
+          刷新
+        </button>
+      </div>
+      <div v-if="insightLoading && !insightText" class="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 class="w-3.5 h-3.5 animate-spin" /> 正在分析你的工作节奏...
+      </div>
+      <p v-else class="text-sm text-foreground/80 leading-relaxed">{{ insightText || '点击刷新生成洞察' }}</p>
+      <button
+        class="text-xs text-primary hover:underline mt-3"
+        @click="router.push('/agent')"
+      >展开详细分析 →</button>
     </div>
   </div>
 </template>

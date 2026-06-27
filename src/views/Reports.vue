@@ -3,14 +3,13 @@ import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { marked } from 'marked'
 import type { Report, ReportTemplate, WorkRecord } from '@/types'
 import { formatDate, formatDateTime, relativeTime, today, todayISO, endOfTodayISO } from '@/lib/utils'
-import { Loader2, Plus, Trash2, Download, FileText, Sparkles, ChevronLeft, Pencil, Check, Eye, Edit3, Save } from 'lucide-vue-next'
+import { Loader2, Trash2, Download, FileText, Sparkles, ChevronLeft, Pencil, Check, Eye, Edit3, Save } from 'lucide-vue-next'
 
 marked.setOptions({ breaks: true, gfm: true })
 
 const reports = ref<Report[]>([])
 const templates = ref<ReportTemplate[]>([])
 const loading = ref(true)
-const showGenerate = ref(false)
 const generating = ref(false)
 const streamingContent = ref('')
 const generatingId = ref<string | null>(null)
@@ -20,6 +19,16 @@ const titleDraft = ref('')
 const editMode = ref(false)
 const contentDraft = ref('')
 const savingContent = ref(false)
+const errorMessage = ref('')
+
+function showError(msg: string) {
+  errorMessage.value = msg
+  setTimeout(() => {
+    if (errorMessage.value === msg) {
+      errorMessage.value = ''
+    }
+  }, 3000)
+}
 
 const form = ref({
   type: 'daily' as 'daily' | 'weekly' | 'monthly',
@@ -30,10 +39,76 @@ const form = ref({
   useMemory: true
 })
 
+const recommendedTemplateId = ref('')
+
 let unsubStream: (() => void) | null = null
 let unsubStatus: (() => void) | null = null
 
 const typeLabels = { daily: '日报', weekly: '周报', monthly: '月报' }
+
+const clusteringLabels: Record<string, string> = {
+  timeline: '按时间顺序排列',
+  category: '按分类归纳',
+  project: '按项目维度组织'
+}
+
+function clusteringDesc(clustering?: string): string {
+  if (!clustering) return ''
+  return clusteringLabels[clustering] ?? ''
+}
+
+// 当前类型下可选模板
+const filteredTemplates = computed(() =>
+  templates.value.filter(t => t.type === form.value.type)
+)
+
+// 智能推荐：基于工作记录分类占比推荐模板
+async function computeRecommendation() {
+  if (form.value.type !== 'daily') {
+    recommendedTemplateId.value = ''
+    return
+  }
+  if (!form.value.startDate) return
+  try {
+    const start = new Date(form.value.startDate)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(form.value.endDate)
+    end.setHours(23, 59, 59, 999)
+    const recs = await window.api.workRecords.list({
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      limit: 500
+    })
+    if (recs.length === 0) {
+      recommendedTemplateId.value = ''
+      return
+    }
+    const counts: Record<string, number> = {}
+    for (const r of recs) {
+      const cat = r.category ?? '其他'
+      counts[cat] = (counts[cat] ?? 0) + 1
+    }
+    const total = recs.length
+    const devRatio = (counts['开发'] ?? 0) / total
+    const commRatio = ((counts['会议'] ?? 0) + (counts['沟通'] ?? 0)) / total
+
+    if (devRatio > 0.5) {
+      recommendedTemplateId.value = 'tpl-daily-tech'
+    } else if (commRatio > 0.4) {
+      recommendedTemplateId.value = 'tpl-daily-simple'
+    } else if (Object.keys(counts).length > 3) {
+      recommendedTemplateId.value = 'tpl-daily-project'
+    } else {
+      recommendedTemplateId.value = 'tpl-daily-default'
+    }
+    // 若推荐模板不在可选列表中，清空
+    if (!filteredTemplates.value.find(t => t.id === recommendedTemplateId.value)) {
+      recommendedTemplateId.value = ''
+    }
+  } catch {
+    recommendedTemplateId.value = ''
+  }
+}
 
 const renderedContent = computed(() => {
   const content = selectedReport.value?.content || streamingContent.value
@@ -73,21 +148,47 @@ function openGenerate() {
     customInstruction: '',
     useMemory: true
   }
+  recommendedTemplateId.value = ''
   streamingContent.value = ''
   generatingId.value = null
-  showGenerate.value = true
+  computeRecommendation().then(() => {
+    // 若用户尚未选模板，自动套用推荐模板
+    if (!form.value.templateId && recommendedTemplateId.value) {
+      form.value.templateId = recommendedTemplateId.value
+    }
+  })
+}
+
+// 表单类型或日期变化时重新计算推荐
+function onFormChange() {
+  form.value.templateId = ''
+  computeRecommendation().then(() => {
+    if (recommendedTemplateId.value) {
+      form.value.templateId = recommendedTemplateId.value
+    }
+  })
 }
 
 async function generate() {
   const records = await loadRecords()
   if (records.length === 0) {
-    alert('所选日期范围内没有工作记录，无法生成报告')
+    showError('所选日期范围内没有工作记录，无法生成报告')
     return
   }
   const settings = await window.api.settings.get()
   const tpl = form.value.templateId ? templates.value.find(t => t.id === form.value.templateId) : null
 
-  showGenerate.value = false
+  // 拉取今日计划注入到日报
+  let plans: Array<{ text: string; completed: boolean }> = []
+  if (form.value.type === 'daily') {
+    try {
+      const planList = await window.api.plans.list({ date: form.value.startDate })
+      plans = planList.map(p => ({ text: p.text, completed: p.completed }))
+    } catch {
+      plans = []
+    }
+  }
+
   generating.value = true
   streamingContent.value = ''
   selectedReport.value = null
@@ -97,6 +198,8 @@ async function generate() {
     startDate: form.value.startDate,
     endDate: form.value.endDate,
     templateBody: tpl?.content,
+    clustering: tpl?.clustering ?? 'timeline',
+    plans: plans.length > 0 ? plans : undefined,
     customInstruction: form.value.customInstruction || undefined,
     memoryContent: form.value.useMemory ? settings.memoryContent : undefined,
     records: records.map(r => ({
@@ -123,7 +226,7 @@ async function generate() {
         const r = reports.value.find(x => x.id === data.id)
         if (r) selectedReport.value = r
       } else if (data.status === 'failed') {
-        alert('生成失败：' + (data.error ?? '未知错误'))
+        showError('生成失败：' + (data.error ?? '未知错误'))
       }
       unsubStream?.()
       unsubStatus?.()
@@ -149,7 +252,7 @@ async function deleteReport(id: string) {
 
 async function exportReport(r: Report) {
   const res = await window.api.reports.exportToFile(r.id, 'md')
-  if (!res.ok && res.message) alert(res.message)
+  if (!res.ok && res.message) showError(res.message)
 }
 
 function startEditTitle() {
@@ -201,6 +304,11 @@ onUnmounted(() => {
 
 <template>
   <div class="p-6 max-w-7xl mx-auto">
+    <!-- 错误提示 -->
+    <div v-if="errorMessage" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground px-4 py-2 rounded-md shadow-lg text-sm flex items-center gap-2 transition-all">
+      <span>{{ errorMessage }}</span>
+    </div>
+
     <!-- 报告详情视图 -->
     <template v-if="selectedReport">
       <div class="flex items-center gap-3 mb-4">
@@ -269,6 +377,89 @@ onUnmounted(() => {
         </button>
       </div>
 
+      <!-- 内联报告配置区 -->
+      <div class="card p-5 mb-6 space-y-4">
+        <div>
+          <h3 class="text-base font-semibold mb-1">报告配置</h3>
+          <p class="text-xs text-muted-foreground">配置参数后点击生成，AI 将基于工作记录自动撰写报告</p>
+        </div>
+        <div>
+          <label class="label mb-1 block">报告类型</label>
+          <div class="flex gap-2">
+            <button
+              v-for="t in (['daily','weekly','monthly'] as const)"
+              :key="t"
+              :class="['btn flex-1', form.type === t ? 'btn-primary' : 'btn-outline']"
+              @click="form.type = t; onFormChange()"
+            >{{ typeLabels[t] }}</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="label mb-1 block">开始日期</label>
+            <input type="date" v-model="form.startDate" @change="onFormChange" class="input" />
+          </div>
+          <div>
+            <label class="label mb-1 block">结束日期</label>
+            <input type="date" v-model="form.endDate" @change="onFormChange" class="input" />
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="label">报告模板</label>
+            <button
+              v-if="form.templateId"
+              class="text-xs text-muted-foreground hover:text-foreground"
+              @click="form.templateId = ''"
+            >不使用模板</button>
+          </div>
+          <p class="text-xs text-muted-foreground mb-2">选择报告输出格式，作为 AI 生成的基准参考。标"推荐"的模板根据你的工作内容智能匹配。</p>
+          <div class="grid grid-cols-3 gap-2 max-h-56 overflow-auto pr-1">
+            <button
+              v-for="tpl in filteredTemplates"
+              :key="tpl.id"
+              type="button"
+              class="p-3 rounded-lg border text-left transition-colors"
+              :class="form.templateId === tpl.id
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50'"
+              @click="form.templateId = tpl.id"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sm font-medium truncate">{{ tpl.name }}</span>
+                <span v-if="recommendedTemplateId === tpl.id" class="text-xs text-primary flex items-center gap-0.5 flex-shrink-0">
+                  <Sparkles class="w-3 h-3" />推荐
+                </span>
+              </div>
+              <p class="text-xs text-muted-foreground mt-1">{{ clusteringDesc(tpl.clustering) }}</p>
+              <span class="text-[10px] text-muted-foreground mt-1 inline-block">
+                {{ tpl.isBuiltin ? '内置' : '自定义' }}
+              </span>
+            </button>
+            <button
+              v-if="filteredTemplates.length === 0"
+              type="button"
+              class="p-3 rounded-lg border border-dashed border-border text-xs text-muted-foreground col-span-3 text-center"
+            >该类型暂无模板</button>
+          </div>
+        </div>
+        <div>
+          <label class="label mb-1 block">自定义指令（可选）</label>
+          <textarea v-model="form.customInstruction" class="textarea" rows="2" placeholder="例如：突出数据成果，简洁风格"></textarea>
+        </div>
+        <label class="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" v-model="form.useMemory" />
+          使用个人工作记忆
+        </label>
+        <div class="flex justify-end pt-1">
+          <button class="btn-primary" @click="generate" :disabled="generating">
+            <Sparkles v-if="!generating" class="w-4 h-4" />
+            <Loader2 v-else class="w-4 h-4 animate-spin" />
+            {{ generating ? '正在生成...' : '开始生成报告' }}
+          </button>
+        </div>
+      </div>
+
       <!-- 流式生成中 -->
       <div v-if="generating" class="card p-6 mb-6">
         <div class="flex items-center gap-2 text-sm text-muted-foreground mb-3">
@@ -286,7 +477,7 @@ onUnmounted(() => {
       <div v-else-if="reports.length === 0" class="card p-12 text-center text-muted-foreground">
         <FileText class="w-10 h-10 mx-auto mb-3 opacity-40" />
         <p>还没有生成过报告</p>
-        <p class="text-xs mt-1">点击右上角"生成报告"开始</p>
+        <p class="text-xs mt-1">配置上方参数后点击"开始生成报告"</p>
       </div>
 
       <div v-else class="space-y-2">
@@ -309,59 +500,6 @@ onUnmounted(() => {
           <span v-else-if="r.status === 'failed'" class="text-xs text-destructive">失败</span>
           <button class="btn-ghost btn-icon btn-sm" @click.stop="exportReport(r)"><Download class="w-3.5 h-3.5" /></button>
           <button class="btn-ghost btn-icon btn-sm hover:text-destructive" @click.stop="deleteReport(r.id)"><Trash2 class="w-3.5 h-3.5" /></button>
-        </div>
-      </div>
-
-      <!-- 生成表单弹窗 -->
-      <div v-if="showGenerate" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showGenerate = false">
-        <div class="card p-6 w-full max-w-lg mx-4">
-          <h3 class="text-lg font-semibold mb-4">生成报告</h3>
-          <div class="space-y-4">
-            <div>
-              <label class="label mb-1 block">报告类型</label>
-              <div class="flex gap-2">
-                <button
-                  v-for="t in (['daily','weekly','monthly'] as const)"
-                  :key="t"
-                  :class="['btn flex-1', form.type === t ? 'btn-primary' : 'btn-outline']"
-                  @click="form.type = t"
-                >{{ typeLabels[t] }}</button>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="label mb-1 block">开始日期</label>
-                <input type="date" v-model="form.startDate" class="input" />
-              </div>
-              <div>
-                <label class="label mb-1 block">结束日期</label>
-                <input type="date" v-model="form.endDate" class="input" />
-              </div>
-            </div>
-            <div>
-              <label class="label mb-1 block">报告模板（可选）</label>
-              <select v-model="form.templateId" class="input">
-                <option value="">不使用模板</option>
-                <option v-for="t in templates.filter(t => t.type === form.type)" :key="t.id" :value="t.id">
-                  {{ t.name }}{{ t.isBuiltin ? '（内置）' : '' }}
-                </option>
-              </select>
-            </div>
-            <div>
-              <label class="label mb-1 block">自定义指令（可选）</label>
-              <textarea v-model="form.customInstruction" class="textarea" rows="2" placeholder="例如：突出数据成果，简洁风格"></textarea>
-            </div>
-            <label class="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" v-model="form.useMemory" />
-              使用个人工作记忆
-            </label>
-          </div>
-          <div class="flex justify-end gap-2 mt-5">
-            <button class="btn-outline" @click="showGenerate = false">取消</button>
-            <button class="btn-primary" @click="generate">
-              <Sparkles class="w-4 h-4" /> 开始生成
-            </button>
-          </div>
         </div>
       </div>
     </template>

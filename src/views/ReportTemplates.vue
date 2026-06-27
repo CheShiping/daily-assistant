@@ -17,6 +17,16 @@ const generating = ref(false)
 const genContent = ref('')
 let unsubStream: (() => void) | null = null
 let unsubStatus: (() => void) | null = null
+const errorMessage = ref('')
+
+function showError(msg: string) {
+  errorMessage.value = msg
+  setTimeout(() => {
+    if (errorMessage.value === msg) {
+      errorMessage.value = ''
+    }
+  }, 3000)
+}
 
 const typeLabels = { daily: '日报', weekly: '周报', monthly: '月报' }
 
@@ -72,7 +82,7 @@ async function remove(id: string) {
     await window.api.reportTemplates.delete(id)
     await load()
   } catch (e) {
-    alert((e as Error).message)
+    showError((e as Error).message)
   }
 }
 
@@ -98,7 +108,7 @@ async function generate() {
     if (data.status === 'completed') {
       genContent.value = data.content
     } else if (data.status === 'failed') {
-      alert('生成失败：' + (data.error ?? '未知错误'))
+      showError('生成失败：' + (data.error ?? '未知错误'))
     }
   })
 }
@@ -123,6 +133,11 @@ onUnmounted(() => {
 
 <template>
   <div class="p-6 max-w-5xl mx-auto">
+    <!-- 错误提示 -->
+    <div v-if="errorMessage" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground px-4 py-2 rounded-md shadow-lg text-sm flex items-center gap-2 transition-all">
+      <span>{{ errorMessage }}</span>
+    </div>
+
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold">报告模板</h1>
       <div class="flex gap-2">

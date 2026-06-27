@@ -237,6 +237,8 @@ export interface GenerateReportInput {
   templateBody?: string
   customInstruction?: string
   memoryContent?: string
+  clustering?: 'timeline' | 'category' | 'project'
+  plans?: Array<{ text: string; completed: boolean }>
   records: Array<{ startedAt: string; summary: string; category?: string }>
   appUsageSummary?: Array<{ appName: string; durationMinutes: number }>
 }
@@ -261,6 +263,31 @@ export async function generateReport(
     for (const a of input.appUsageSummary) {
       lines.push(`- ${a.appName}: ${a.durationMinutes} 分钟`)
     }
+  }
+  // 聚类策略提示
+  if (input.templateBody) {
+    const clusteringHints: Record<string, string> = {
+      timeline: '按时间线排列工作记录，标注每个时间段做了什么。',
+      category: '按工作分类归纳（开发/会议/文档/测试/沟通等），每类下列出具体事项。',
+      project: '识别工作记录中的项目关键词，按项目维度分组组织内容。'
+    }
+    const hint = clusteringHints[input.clustering ?? 'timeline'] ?? clusteringHints.timeline
+    lines.push(`【组织方式】${hint}`)
+  }
+  // 计划注入
+  if (input.plans && input.plans.length > 0) {
+    lines.push('【今日计划】')
+    const completed = input.plans.filter(p => p.completed)
+    const incomplete = input.plans.filter(p => !p.completed)
+    if (completed.length > 0) {
+      lines.push('已完成：')
+      completed.forEach(p => lines.push(`- [x] ${p.text}`))
+    }
+    if (incomplete.length > 0) {
+      lines.push('未完成：')
+      incomplete.forEach(p => lines.push(`- [ ] ${p.text}`))
+    }
+    lines.push('请在报告中对比"计划 vs 实际"，给出完成情况说明。')
   }
   if (input.templateBody) {
     lines.push(`【报告模板】（仅作为排版格式参考，不要照抄内容）`)
@@ -407,4 +434,115 @@ export function emitToRenderer(channel: string, ...args: unknown[]) {
   if (win && !win.isDestroyed()) {
     win.webContents.send(channel, ...args)
   }
+}
+
+// ============ AI 洞察 ============
+export async function generateInsight(
+  type: 'heatmap' | 'appUsage',
+  data: unknown,
+  onChunk: (chunk: string) => void,
+  onDone: (full: string) => void,
+  onError: (err: Error) => void
+): Promise<void> {
+  const settings = getSettings()
+  if (!settings.apiKey) { onError(new Error('请先配置 API Key')); return }
+
+  const prompts: Record<string, string> = {
+    heatmap: `以下是用户的时段热力图数据（日期 × 小时 × 记录数）：\n${JSON.stringify(data)}\n\n请用一句话总结用户的工作节奏特点和一个改进建议。不超过 100 字。`,
+    appUsage: `以下是用户的应用使用时长数据：\n${JSON.stringify(data)}\n\n请用一句话总结用户的时间分配特点和一个改进建议。不超过 100 字。`
+  }
+
+  try {
+    const res = await fetch(apiUrl(settings, '/chat/completions'), {
+      method: 'POST',
+      headers: authHeaders(settings),
+      body: JSON.stringify({
+        model: settings.model,
+        messages: [
+          { role: 'system', content: '你是一个工作效率分析助手。请简洁、具体地回答。' },
+          { role: 'user', content: prompts[type] }
+        ],
+        stream: true,
+        temperature: 0.5,
+        max_tokens: 200
+      })
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    if (!res.body) throw new Error('无响应流')
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let full = ''
+    let buffer = ''
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const eventLines = buffer.split('\n')
+      buffer = eventLines.pop() ?? ''
+      for (const line of eventLines) {
+        const trimmed = line.trim()
+        if (!trimmed.startsWith('data:')) continue
+        const data = trimmed.slice(5).trim()
+        if (data === '[DONE]') continue
+        try {
+          const json = JSON.parse(data)
+          const delta = json.choices?.[0]?.delta?.content
+          if (delta) { full += delta; onChunk(delta) }
+        } catch {}
+      }
+    }
+    onDone(full)
+  } catch (e) { onError(e as Error) }
+}
+
+// ============ AI 对话 ============
+export async function chat(
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+  onChunk: (chunk: string) => void,
+  onDone: (full: string) => void,
+  onError: (err: Error) => void
+): Promise<void> {
+  const settings = getSettings()
+  if (!settings.apiKey) { onError(new Error('请先配置 API Key')); return }
+
+  try {
+    const res = await fetch(apiUrl(settings, '/chat/completions'), {
+      method: 'POST',
+      headers: authHeaders(settings),
+      body: JSON.stringify({
+        model: settings.model,
+        messages,
+        stream: true,
+        temperature: 0.7
+      })
+    })
+    if (!res.ok) {
+      const txt = await res.text()
+      throw new Error(`HTTP ${res.status} ${txt.slice(0, 200)}`)
+    }
+    if (!res.body) throw new Error('无响应流')
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let full = ''
+    let buffer = ''
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const eventLines = buffer.split('\n')
+      buffer = eventLines.pop() ?? ''
+      for (const line of eventLines) {
+        const trimmed = line.trim()
+        if (!trimmed.startsWith('data:')) continue
+        const data = trimmed.slice(5).trim()
+        if (data === '[DONE]') continue
+        try {
+          const json = JSON.parse(data)
+          const delta = json.choices?.[0]?.delta?.content
+          if (delta) { full += delta; onChunk(delta) }
+        } catch {}
+      }
+    }
+    onDone(full)
+  } catch (e) { onError(e as Error) }
 }
