@@ -260,8 +260,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="p-6 max-w-3xl mx-auto pb-12">
-    <h1 class="text-2xl font-bold mb-6">设置</h1>
+  <div class="p-6 px-7 max-w-3xl mx-auto pb-12 w-full h-full overflow-y-auto min-h-0">
+    <h1 class="font-display text-[26px] font-bold tracking-tight mb-1">设置</h1>
+    <p class="text-xs text-muted-foreground mb-6">配置 API、隐私、截图节奏和本地接入</p>
 
     <div v-if="loading" class="flex items-center gap-2 text-muted-foreground">
       <Loader2 class="w-4 h-4 animate-spin" /> 加载中...

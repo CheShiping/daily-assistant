@@ -1,4 +1,7 @@
-const { contextBridge, ipcRenderer } = require("electron");
+"use strict";
+
+// electron/preload.ts
+var { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("api", {
   // 窗口控制
   minimize: () => ipcRenderer.send("window-minimize"),

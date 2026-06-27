@@ -279,7 +279,7 @@ const pieOptions: ChartOptions<'doughnut'> = {
 </script>
 
 <template>
-  <div class="p-6 pb-12">
+  <div class="p-6 px-7 pb-12 w-full h-full overflow-y-auto min-h-0">
     <!-- 顶栏：描述 + 日期切换按钮 -->
     <div class="flex items-center justify-between mb-6">
       <p class="text-sm text-[#999]">查看各应用使用时长分布，了解时间花费结构</p>

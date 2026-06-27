@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>方向 4 · Editorial 杂志</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #F2EDE4;
+    --paper-2: #E8E1D2;
+    --ink: #1A1814;
+    --ink-2: #5C5346;
+    --ink-3: #8B8478;
+    --rule: #1A1814;
+    --accent: #6B2C1B;
+    --accent-2: #8B3923;
+    --good: #2F5A2B;
+    --warn: #A86A1F;
+    --info: #2F4A5A;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:'Inter Tight',-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.55}
+  .serif{font-family:'Cormorant Garamond','Times New Roman',serif;font-feature-settings:'liga','dlig','ss01';letter-spacing:-0.015em;font-weight:500}
+  .serif-i{font-family:'Cormorant Garamond',serif;font-style:italic;font-feature-settings:'liga','dlig','ss01','ss02';letter-spacing:-0.015em}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;font-family:inherit;letter-spacing:inherit}
+
+  /* Paper texture overlay (subtle) */
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(circle at 25% 15%,rgba(107,44,27,.015),transparent 50%),radial-gradient(circle at 80% 80%,rgba(26,24,20,.02),transparent 60%);z-index:0}
+  body>*{position:relative;z-index:1}
+
+  .app{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+
+  /* Sidebar - editorial style */
+  .side{padding:36px 0 36px 36px;border-right:1px solid var(--ink);background:var(--paper);position:relative}
+  .side::after{content:"";position:absolute;right:0;top:36px;bottom:36px;width:1px;background:var(--ink)}
+  .masthead{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:500;letter-spacing:-0.03em;line-height:1.05;margin-bottom:6px;color:var(--ink)}
+  .masthead .em{font-style:italic;color:var(--accent);font-weight:500}
+  .tagline{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:13px;color:var(--ink-2);margin-bottom:36px;line-height:1.4}
+  .side-issue{font-family:'Cormorant Garamond',serif;font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:var(--ink-3);font-weight:500;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid var(--ink);font-style:normal}
+
+  .toc-label{font-family:'Cormorant Garamond',serif;font-size:10px;text-transform:uppercase;letter-spacing:0.22em;color:var(--ink-3);font-weight:600;margin:0 0 12px}
+  .nav-item{display:flex;align-items:baseline;gap:10px;padding:7px 0;color:var(--ink-2);font-size:13px;font-weight:500;transition:color .15s;cursor:pointer;border-bottom:1px solid transparent}
+  .nav-item:hover{color:var(--ink)}
+  .nav-item.active{color:var(--ink);font-weight:600}
+  .nav-item .num{font-family:'Cormorant Garamond',serif;font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums;font-weight:500;font-style:italic;width:22px;flex:none}
+  .nav-item.active .num{color:var(--accent)}
+  .nav-item.active::after{content:"·";margin-left:auto;color:var(--accent);font-weight:800}
+  .nav-spacer{height:18px}
+
+  .side-foot{margin-top:36px;padding-top:18px;border-top:1px solid var(--ink);font-family:'Cormorant Garamond',serif;font-size:11px;color:var(--ink-3);font-style:italic;line-height:1.5}
+  .side-foot .signature{font-style:normal;font-weight:600;color:var(--ink-2);font-size:11px;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;display:block}
+
+  /* Main */
+  .main{padding:36px 56px 100px;max-width:1000px}
+  .container{max-width:880px}
+
+  /* Page header - editorial */
+  .page-top{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:48px;padding-bottom:18px;border-bottom:1px solid var(--ink)}
+  .crumb{font-family:'Cormorant Garamond',serif;font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.2em;font-weight:600;margin-bottom:6px}
+  .page-top h1{font-family:'Cormorant Garamond',serif;font-size:72px;font-weight:500;letter-spacing:-0.035em;line-height:0.95;margin:0;color:var(--ink);max-width:680px}
+  .page-top h1 .it{font-style:italic;color:var(--accent);font-weight:500}
+  .page-top .dateline{font-family:'Cormorant Garamond',serif;font-size:13px;color:var(--ink-2);margin-top:14px;font-style:italic}
+  .page-top .right{text-align:right;font-family:'Cormorant Garamond',serif;font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.18em;line-height:1.6;font-weight:500}
+  .page-top .right .v{color:var(--ink);font-weight:600}
+
+  /* Drop cap friendly */
+  .deck{font-family:'Cormorant Garamond',serif;font-size:19px;line-height:1.45;color:var(--ink-2);font-weight:400;margin-bottom:48px;max-width:640px;letter-spacing:-0.005em}
+  .deck::first-letter{font-family:'Cormorant Garamond',serif;font-size:74px;float:left;line-height:0.85;padding:6px 12px 0 0;color:var(--accent);font-weight:500;font-style:italic}
+
+  /* Live status */
+  .rec-status{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;background:var(--ink);color:var(--paper);border-radius:999px;font-family:'Cormorant Garamond',serif;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-weight:600}
+  .rec-status .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .rec-status.idle{background:transparent;color:var(--ink-2);border:1px solid var(--ink)}
+  .rec-status.idle .dot{background:var(--ink-3);animation:none}
+
+  /* Section header - editorial */
+  section{margin-top:60px}
+  .sec-head{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:baseline;margin-bottom:24px;padding-bottom:10px;border-bottom:1px solid var(--ink)}
+  .sec-head .num{font-family:'Cormorant Garamond',serif;font-size:13px;font-style:italic;color:var(--accent);font-weight:500;letter-spacing:0.04em}
+  .sec-head h2{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:500;letter-spacing:-0.015em;margin:0;color:var(--ink);line-height:1.1}
+  .sec-head h2 .it{font-style:italic}
+  .sec-head .meta{font-family:'Cormorant Garamond',serif;font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.18em;font-weight:500}
+
+  /* Hero - editorial */
+  .hero{display:grid;grid-template-columns:1.4fr 1fr;gap:0;margin-top:0;border:1px solid var(--ink);background:var(--paper);position:relative;overflow:hidden}
+  .hero .left{padding:36px 36px 32px}
+  .hero h2{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:500;letter-spacing:-0.025em;line-height:1.05;margin:0 0 18px;color:var(--ink)}
+  .hero h2 .it{font-style:italic;color:var(--accent);font-weight:500}
+  .hero p{font-family:'Cormorant Garamond',serif;font-size:16px;line-height:1.5;color:var(--ink-2);margin:0 0 22px;max-width:440px}
+  .hero .pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--ink);color:var(--ink-2);font-family:'Cormorant Garamond',serif;font-size:11.5px;font-weight:500;background:var(--paper);letter-spacing:0.02em;border-radius:999px}
+  .pill svg{width:10px;height:10px;stroke-width:2.5;color:var(--good)}
+  .hero .right{background:var(--ink);color:var(--paper);padding:36px;display:flex;flex-direction:column;justify-content:space-between;position:relative}
+  .hero .right::before{content:"";position:absolute;top:24px;right:24px;width:8px;height:8px;background:var(--accent);border-radius:50%;box-shadow:0 0 16px var(--accent);animation:pulse 2s infinite}
+  .hero .right .lbl{font-family:'Cormorant Garamond',serif;font-size:10px;text-transform:uppercase;letter-spacing:0.24em;color:var(--paper-2);opacity:0.6;font-weight:600}
+  .hero .right .time{font-family:'Cormorant Garamond',serif;font-size:64px;font-weight:400;line-height:1;letter-spacing:-0.04em;font-variant-numeric:tabular-nums;color:var(--paper);margin-top:6px}
+  .hero .right .time .sec{font-size:32px;font-style:italic;color:var(--accent);margin-left:2px}
+  .hero .right .date{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;color:var(--paper-2);margin-top:8px}
+  .hero .right .ctrl{display:flex;align-items:center;justify-content:space-between;padding-top:18px;border-top:1px solid rgba(255,255,255,.15)}
+  .hero .right .ctrl .lbl2{font-family:'Cormorant Garamond',serif;font-size:11px;color:var(--paper-2);text-transform:uppercase;letter-spacing:0.18em;font-weight:500}
+  .hero .right .ctrl .btn{width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;transition:transform .15s}
+  .hero .right .ctrl .btn:hover{transform:scale(1.06)}
+  .hero .right .ctrl .btn svg{width:14px;height:14px;stroke-width:2;fill:currentColor}
+
+  /* Stat block - editorial big numbers */
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--ink);background:var(--paper);margin-top:0}
+  .stat{padding:28px 32px 26px;border-right:1px solid var(--ink);position:relative}
+  .stat:last-child{border-right:0}
+  .stat .lbl{font-family:'Cormorant Garamond',serif;font-size:10px;text-transform:uppercase;letter-spacing:0.22em;color:var(--ink-3);font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+  .stat .lbl::after{content:"";flex:1;height:1px;background:var(--ink-3);opacity:0.4;margin-left:6px}
+  .stat .v{font-family:'Cormorant Garamond',serif;font-size:72px;font-weight:400;letter-spacing:-0.04em;line-height:0.95;color:var(--ink);font-variant-numeric:tabular-nums}
+  .stat .v .it{font-style:italic;color:var(--accent);font-weight:400}
+  .stat .v .sm{font-size:24px;color:var(--ink-2);font-style:italic;margin-left:4px;font-weight:400;vertical-align:top;line-height:1.4;display:inline-block}
+  .stat .v .unit{font-size:20px;color:var(--ink-2);font-weight:500;margin-left:2px;letter-spacing:0.02em}
+  .stat .delta{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:13px;color:var(--good);margin-top:8px;font-weight:500}
+  .stat .delta.warn{color:var(--warn)}
+
+  /* Plan list - editorial */
+  .plan-list{border:1px solid var(--ink);background:var(--paper)}
+  .plan-row{display:grid;grid-template-columns:60px 1fr auto;gap:18px;align-items:center;padding:18px 24px;border-bottom:1px solid var(--ink);transition:background .15s;cursor:pointer}
+  .plan-row:last-child{border-bottom:0}
+  .plan-row:hover{background:var(--paper-2)}
+  .plan-row .num{font-family:'Cormorant Garamond',serif;font-size:13px;font-style:italic;color:var(--ink-3);font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+  .check{width:18px;height:18px;border:1.5px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .15s;flex:none;background:var(--paper)}
+  .check.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .check svg{width:10px;height:10px;stroke-width:3;opacity:0;transition:opacity .12s}
+  .check.on svg{opacity:1}
+  .plan-text-wrap{display:flex;align-items:baseline;gap:10px;flex:1;min-width:0}
+  .plan-text{font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--ink);font-weight:500;line-height:1.3;letter-spacing:-0.005em}
+  .plan-text.done{color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:1px;text-decoration-color:var(--ink-3)}
+  .plan-text .t{font-family:'Cormorant Garamond',serif;font-size:11px;font-style:italic;color:var(--ink-3);font-weight:400;margin-right:4px;font-variant-numeric:tabular-nums}
+  .plan-row .dur{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:12px;color:var(--ink-3);font-weight:500;font-variant-numeric:tabular-nums}
+  .plan-input{display:flex;align-items:center;gap:10px;padding:14px 24px;background:var(--paper-2);border-top:1px solid var(--ink)}
+  .plan-input .ic{color:var(--ink-3);width:14px;height:14px;flex:none;stroke-width:1.6}
+  .plan-input input{flex:1;background:transparent;border:0;outline:0;font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--ink);font-weight:500}
+  .plan-input input::placeholder{color:var(--ink-3);font-style:italic;font-weight:400}
+
+  /* Recent records - magazine style */
+  .records-grid{border:1px solid var(--ink);background:var(--paper);padding:0}
+  .rec-row{display:grid;grid-template-columns:90px 110px 1fr;gap:24px;align-items:baseline;padding:16px 28px;border-bottom:1px solid var(--ink)}
+  .rec-row:last-child{border-bottom:0}
+  .rec-row:hover{background:var(--paper-2)}
+  .rec-row .t{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
+  .rec-row .cat{font-family:'Cormorant Garamond',serif;font-size:11px;text-transform:uppercase;letter-spacing:0.2em;color:var(--accent);font-weight:600;padding-top:4px}
+  .rec-row .cat.comm{color:var(--good)}
+  .rec-row .cat.design{color:var(--info)}
+  .rec-row .cat.plan{color:var(--warn)}
+  .rec-row .s{font-family:'Cormorant Garamond',serif;font-size:15px;line-height:1.45;color:var(--ink);font-weight:400}
+
+  /* Bars - editorial chart */
+  .bars-wrap{border:1px solid var(--ink);background:var(--paper);padding:28px 32px 22px}
+  .bars{display:flex;align-items:flex-end;gap:3px;height:100px;margin-bottom:10px}
+  .bar{flex:1;background:var(--paper-2);border-radius:0;position:relative;transition:all .2s;min-height:2px;cursor:pointer;border-top:1px solid var(--ink)}
+  .bar:hover{background:var(--accent)}
+  .bar.today{background:var(--ink)}
+  .bar.peak{background:var(--accent);box-shadow:0 0 0 2px var(--accent);position:relative}
+  .bar.peak::after{content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:1px;height:5px;background:var(--accent)}
+  .axis{display:flex;justify-content:space-between;font-family:'Cormorant Garamond',serif;font-size:11px;color:var(--ink-3);font-weight:500;font-style:italic;letter-spacing:0.04em;margin-top:2px}
+  .legend{display:flex;align-items:center;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid var(--ink);font-family:'Cormorant Garamond',serif;font-size:11px;color:var(--ink-2);font-weight:500;letter-spacing:0.04em}
+  .legend .sw{display:inline-flex;gap:1px;align-items:flex-end;height:12px}
+  .legend .sw span{width:10px;background:var(--paper-2);border-top:1px solid var(--ink)}
+  .legend .sw span:nth-child(4){background:var(--ink)}
+
+  /* Displays - magazine cards */
+  .disp-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .disp{border:1px solid var(--ink);background:var(--paper);padding:20px 24px;display:flex;flex-direction:column;gap:10px;transition:background .15s}
+  .disp:hover{background:var(--paper-2)}
+  .disp .head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .disp .ic{width:36px;height:36px;border:1px solid var(--ink);display:flex;align-items:center;justify-content:center;color:var(--ink);flex:none}
+  .disp .ic svg{width:16px;height:16px;stroke-width:1.5}
+  .disp .b{font-family:'Cormorant Garamond',serif;font-size:10px;text-transform:uppercase;letter-spacing:0.22em;color:var(--accent);font-weight:600;padding-top:6px}
+  .disp .b.sec{color:var(--ink-3)}
+  .disp .name{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;color:var(--ink);letter-spacing:-0.015em;line-height:1.1}
+  .disp .meta{font-family:'Cormorant Garamond',serif;font-size:12px;color:var(--ink-3);font-style:italic;letter-spacing:0.02em;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .disp .meta .k{color:var(--ink-3)}
+  .disp .meta .v{color:var(--ink-2);font-style:normal;font-variant-numeric:tabular-nums}
+
+  /* Switch */
+  .switch{display:inline-flex;align-items:center;gap:8px;font-family:'Cormorant Garamond',serif;font-size:11px;color:var(--ink-2);cursor:pointer;user-select:none;font-weight:500;text-transform:uppercase;letter-spacing:0.18em}
+  .switch input{appearance:none;width:28px;height:14px;background:transparent;border:1px solid var(--ink);border-radius:999px;position:relative;transition:background .15s;cursor:pointer}
+  .switch input::after{content:"";position:absolute;top:1px;left:1px;width:10px;height:10px;background:var(--ink);border-radius:50%;transition:all .15s}
+  .switch input:checked{background:var(--ink)}
+  .switch input:checked::after{left:15px;background:var(--paper)}
+
+  .spacer{flex:1}
+
+  /* Two column row for chart + displays */
+  .row-2col{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;align-items:start}
+  .row-2col .right{height:100%}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="side">
+    <div class="masthead">牙牙�?span class="em">·</span>日报</div>
+    <div class="tagline">为你工作的一天，留下有迹可循的记录�?/div>
+
+    <div class="side-issue">Vol. 02 · No. 178</div>
+
+    <div class="toc-label">目录</div>
+    <a class="nav-item active" href="#"><span class="num">I</span>今日工作</a>
+    <a class="nav-item" href="#"><span class="num">II</span>生成报告</a>
+    <a class="nav-item" href="#"><span class="num">III</span>时间�?/a>
+    <a class="nav-item" href="#"><span class="num">IV</span>时段热力</a>
+    <a class="nav-item" href="#"><span class="num">V</span>应用记录</a>
+    <a class="nav-item" href="#"><span class="num">VI</span>历史报告</a>
+    <a class="nav-item" href="#"><span class="num">VII</span>Agent</a>
+
+    <div class="nav-spacer"></div>
+
+    <div class="toc-label">附录</div>
+    <a class="nav-item" href="#"><span class="num">i</span>订阅</a>
+    <a class="nav-item" href="#"><span class="num">ii</span>邀�?/a>
+    <a class="nav-item" href="#"><span class="num">iii</span>隐私</a>
+    <a class="nav-item" href="#"><span class="num">iv</span>设置</a>
+
+    <div class="side-foot">
+      <span class="signature">By the editors</span>
+      开�?· 本地优先 · 2.0.0
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="container">
+      <div class="page-top">
+        <div>
+          <div class="crumb">Vol. II · 今日工作</div>
+          <h1>今天，你<span class="it">做了什�?/span>�?/h1>
+          <div class="dateline">2026 �?6 �?27 日，星期�?· 北京</div>
+        </div>
+        <div class="right">
+          记录�?· 1.2 GB<br/>
+          <span class="v">11:00 peak</span><br/>
+          <span style="font-style:italic;color:var(--accent)">�?Space</span> 快速截�?        </div>
+      </div>
+
+      <p class="deck">从早晨九点零三分到现在的每一秒，都被静默地拆分成可以追溯的工作事件。本期日报，AI 替你把噪声变成叙事，把截图变成句子�?/p>
+
+      <!-- Hero -->
+      <section style="margin-top:0">
+        <div class="hero">
+          <div class="left">
+            <h2>你只管工作，<br/><span class="it">日报交给我�?/span></h2>
+            <p>静默记录工作轨迹，AI 帮你写好每一份日报、周报、月报。截屏、分类、归纳、生成，每一步都不打扰你的当下�?/p>
+            <div class="pills">
+              <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销�?/span>
+              <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+              <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 内容脱敏</span>
+            </div>
+          </div>
+          <div class="right">
+            <div>
+              <div class="lbl">Current session</div>
+              <div class="time">05:28<span class="sec">:14</span></div>
+              <div class="date">since 09:03 this morning</div>
+            </div>
+            <div class="ctrl">
+              <span class="lbl2">Pause · Stop</span>
+              <button class="btn"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14"></rect><rect x="14" y="5" width="4" height="14"></rect></svg></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stats -->
+      <section>
+        <div class="sec-head">
+          <span class="num">§ I</span>
+          <h2>今日<span class="it">三件�?/span></h2>
+          <span class="meta">vs. yesterday</span>
+        </div>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="lbl">记录条数</div>
+            <div class="v">12<span class="unit">�?/span></div>
+            <div class="delta">+3 �?· 较昨�?/div>
+          </div>
+          <div class="stat">
+            <div class="lbl">专注时长</div>
+            <div class="v">4.2<span class="sm">小时</span></div>
+            <div class="delta">+0.6 小时 · 较昨�?/div>
+          </div>
+          <div class="stat">
+            <div class="lbl">主要工作</div>
+            <div class="v" style="font-size:48px">开�?span class="it">.</span></div>
+            <div class="delta warn">占比 67% · 单一略高</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Plan -->
+      <section>
+        <div class="sec-head">
+          <span class="num">§ II</span>
+          <h2>今日计划 · <span class="it">本日</span>三件硬指�?/h2>
+          <span class="meta">2 of 3 done</span>
+        </div>
+        <div class="plan-list">
+          <div class="plan-row">
+            <span class="num">01.</span>
+            <div class="plan-text-wrap">
+              <div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+              <div class="plan-text done">整理日报助手需求文�?V2.1</div>
+            </div>
+            <span class="dur">42 min</span>
+          </div>
+          <div class="plan-row">
+            <span class="num">02.</span>
+            <div class="plan-text-wrap">
+              <div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+              <div class="plan-text done">和后端同事对�?API 接口字段</div>
+            </div>
+            <span class="dur">28 min</span>
+          </div>
+          <div class="plan-row">
+            <span class="num">03.</span>
+            <div class="plan-text-wrap">
+              <div class="check"></div>
+              <div class="plan-text"><span class="t">15:00 �?/span>完成模板编辑器交�?/div>
+            </div>
+            <span class="dur" style="color:var(--accent)">in progress</span>
+          </div>
+          <div class="plan-input">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <input type="text" placeholder="加一条新的计划�? />
+          </div>
+        </div>
+      </section>
+
+      <!-- Recent records -->
+      <section>
+        <div class="sec-head">
+          <span class="num">§ III</span>
+          <h2>今日<span class="it">叙事</span>，按时间回放</h2>
+          <span class="meta">5 / 12 records</span>
+        </div>
+        <div class="records-grid">
+          <div class="rec-row">
+            <div class="t">14:32</div>
+            <div class="cat">开�?/div>
+            <div class="s">�?Vue 3 中实现流式报�?Markdown 渲染组件，处�?chunk 拼接时的边界问题�?/div>
+          </div>
+          <div class="rec-row">
+            <div class="t">13:15</div>
+            <div class="cat comm">沟�?/div>
+            <div class="s">和后端同�?OpenAI-compatible 端点的鉴权方式，最终统一使用 Bearer Token�?/div>
+          </div>
+          <div class="rec-row">
+            <div class="t">11:48</div>
+            <div class="cat">开�?/div>
+            <div class="s">修复 Tailwind HSL 变量在暗色模式下的对比问题，foreground 调到 0 0% 98%�?/div>
+          </div>
+          <div class="rec-row">
+            <div class="t">10:20</div>
+            <div class="cat design">设计</div>
+            <div class="s">梳理 Settings 页面信息架构，准备做减法，把可选配置归到一个抽屉里�?/div>
+          </div>
+          <div class="rec-row">
+            <div class="t">09:05</div>
+            <div class="cat plan">规划</div>
+            <div class="s">写下今天的三件硬指标，全部完成才算合格�?/div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Hourly bars + displays -->
+      <section>
+        <div class="sec-head">
+          <span class="num">§ IV</span>
+          <h2>24 小时<span class="it">�?/span>分布</h2>
+          <label class="switch" style="margin-left:auto">
+            <input type="checkbox" /> 前两�?          </label>
+        </div>
+        <div class="row-2col">
+          <div class="bars-wrap">
+            <div class="bars">
+              <div class="bar" style="height:5%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar today" style="height:25%"></div>
+              <div class="bar today" style="height:75%"></div>
+              <div class="bar today peak" style="height:100%"></div>
+              <div class="bar today" style="height:65%"></div>
+              <div class="bar today" style="height:50%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar today" style="height:35%"></div>
+              <div class="bar today" style="height:45%"></div>
+              <div class="bar today" style="height:30%"></div>
+              <div class="bar today" style="height:18%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar" style="height:5%"></div>
+              <div class="bar" style="height:5%"></div>
+            </div>
+            <div class="axis">
+              <span>00</span><span>06</span><span>12</span><span>18</span><span>23</span>
+            </div>
+            <div class="legend">
+              <span>记录密度 · 越深越多</span>
+              <span class="spacer"></span>
+              <span style="font-style:italic">peak at eleven</span>
+            </div>
+          </div>
+          <div>
+            <div class="disp" style="margin-bottom:14px">
+              <div class="head">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+                <div class="b">主显示器</div>
+              </div>
+              <div class="name">DELL U2723QE</div>
+              <div class="meta">
+                <span class="k">分辨�?/span><span class="v">3840 × 2160</span>
+                <span class="k">·</span>
+                <span class="k">缩放</span><span class="v">1.5x</span>
+                <span class="k">·</span>
+                <span class="k">位置</span><span class="v">0, 0</span>
+              </div>
+            </div>
+            <div class="disp">
+              <div class="head">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+                <div class="b sec">副屏</div>
+              </div>
+              <div class="name">Built-in</div>
+              <div class="meta">
+                <span class="k">分辨�?/span><span class="v">2880 × 1800</span>
+                <span class="k">·</span>
+                <span class="k">缩放</span><span class="v">2.0x</span>
+                <span class="k">·</span>
+                <span class="k">位置</span><span class="v">3840, 540</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div style="margin-top:80px;padding-top:24px;border-top:1px solid var(--ink);text-align:center;font-family:'Cormorant Garamond',serif;font-size:12px;color:var(--ink-3);font-style:italic;letter-spacing:0.04em">
+        <span style="text-transform:uppercase;letter-spacing:0.24em;font-style:normal;font-weight:600">�?END OF VOL. 02 �?/span>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

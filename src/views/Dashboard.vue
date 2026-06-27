@@ -92,7 +92,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="p-6 max-w-5xl mx-auto">
+  <div class="p-6 px-7 max-w-5xl mx-auto w-full h-full overflow-y-auto min-h-0">
     <h1 class="text-2xl font-bold mb-1">概览</h1>
     <p class="text-sm text-muted-foreground mb-6">{{ formatDate(new Date()) }} · 牙牙乐日报助手</p>
 

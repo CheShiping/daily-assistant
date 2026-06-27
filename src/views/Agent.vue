@@ -343,7 +343,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="p-6 max-w-5xl mx-auto pb-12 space-y-6">
+  <div class="p-6 px-7 max-w-5xl mx-auto pb-12 space-y-6 w-full h-full overflow-y-auto min-h-0">
     <!-- 标题 -->
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">

@@ -1,0 +1,8 @@
+version: 2.0.0
+files:
+  - url: daily-assistant-setup-2.0.0.exe
+    sha512: CT86qwxIDI33HSPUTjaPTVtTbBgjn+/V8Q7p7fxdfNaKfF2NKbR/ZIg42Aee8LuVOi3hl1eNzwaW+fUNqrFw0w==
+    size: 122808601
+path: daily-assistant-setup-2.0.0.exe
+sha512: CT86qwxIDI33HSPUTjaPTVtTbBgjn+/V8Q7p7fxdfNaKfF2NKbR/ZIg42Aee8LuVOi3hl1eNzwaW+fUNqrFw0w==
+releaseDate: '2026-06-27T16:52:00.650Z'

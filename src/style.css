@@ -2,126 +2,251 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =====================================================
+   牙牙乐日报助手 · 设计 token
+   主色 柑橘亮 #F5A04D · 薄荷辅助 #7AAA9B
+   字体 Bricolage Grotesque + Inter Tight + JetBrains Mono
+   ===================================================== */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 145 30% 14%;
+  /* 背景 · 暖白清亮 */
+  --background: 36 38% 98%;        /* #FCFBF7 */
+  --foreground: 30 11% 16%;        /* #2C2A26 */
+
+  /* 卡片 · 纯白 */
   --card: 0 0% 100%;
-  --card-foreground: 145 30% 14%;
+  --card-foreground: 30 11% 16%;
+
+  /* 浮层 */
   --popover: 0 0% 100%;
-  --popover-foreground: 145 30% 14%;
-  --primary: 142 71% 45%;
+  --popover-foreground: 30 11% 16%;
+
+  /* 柑橘亮主色 (#F5A04D = 27 92% 63%) */
+  --primary: 27 92% 63%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 145 30% 14%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
-  --accent: 142 60% 95%;
-  --accent-foreground: 142 71% 35%;
-  --destructive: 0 84% 60%;
+  --primary-soft: 27 92% 95%;
+
+  /* 中性 */
+  --secondary: 36 30% 95%;
+  --secondary-foreground: 30 11% 16%;
+
+  --muted: 36 24% 94%;
+  --muted-foreground: 30 9% 41%;
+
+  /* accent · 主色弱化 */
+  --accent: 27 92% 95%;
+  --accent-foreground: 27 80% 38%;
+
+  --destructive: 16 65% 56%;
   --destructive-foreground: 0 0% 100%;
-  --border: 0 0% 90%;
-  --input: 0 0% 90%;
-  --ring: 142 71% 45%;
-  --radius: 0.625rem;
-  --sidebar: 142 30% 98%;
-  --sidebar-foreground: 145 30% 14%;
-  --sidebar-primary: 142 71% 45%;
+
+  --border: 36 26% 89%;
+  --input: 36 26% 89%;
+  --ring: 27 92% 63%;
+
+  --radius: 0.875rem;          /* 14px */
+
+  /* 侧边栏 */
+  --sidebar: 36 38% 96%;
+  --sidebar-foreground: 30 11% 16%;
+  --sidebar-primary: 27 92% 63%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 142 60% 93%;
-  --sidebar-accent-foreground: 142 71% 35%;
-  --sidebar-border: 0 0% 90%;
-  --sidebar-ring: 142 71% 45%;
-  --chart-1: 142 71% 45%;
-  --chart-2: 142 60% 55%;
-  --chart-3: 142 50% 38%;
-  --chart-4: 142 65% 65%;
-  --chart-5: 142 40% 30%;
+  --sidebar-accent: 27 80% 93%;
+  --sidebar-accent-foreground: 27 80% 32%;
+  --sidebar-border: 36 26% 89%;
+  --sidebar-ring: 27 92% 63%;
+
+  /* chart · 柑橘 + 薄荷 + 天青 */
+  --chart-1: 27 92% 63%;        /* 柑橘亮 */
+  --chart-2: 165 21% 57%;       /* 薄荷 */
+  --chart-3: 200 28% 55%;       /* 天青 */
+  --chart-4: 27 92% 75%;        /* 浅柑橘 */
+  --chart-5: 27 80% 38%;        /* 深柑橘 */
+
+  /* Spring 缓动 (与 demo 一致) */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring-soft: cubic-bezier(0.34, 1.2, 0.64, 1);
 }
 
+/* dark 留位 · 当前产品仅亮色 */
 .dark {
-  --background: 150 20% 8%;
-  --foreground: 0 0% 98%;
-  --card: 150 20% 10%;
-  --card-foreground: 0 0% 98%;
-  --popover: 150 20% 10%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 142 71% 45%;
-  --primary-foreground: 150 20% 8%;
-  --secondary: 150 15% 18%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 150 15% 18%;
-  --muted-foreground: 0 0% 65%;
-  --accent: 150 15% 20%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62% 40%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 150 15% 20%;
-  --input: 150 15% 20%;
-  --ring: 142 71% 45%;
-  --sidebar: 150 20% 6%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-primary: 142 71% 45%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 150 15% 15%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 150 15% 15%;
-  --sidebar-ring: 142 71% 45%;
+  --background: 30 8% 8%;
+  --foreground: 36 18% 94%;
+  --card: 30 8% 10%;
+  --card-foreground: 36 18% 94%;
+  --popover: 30 8% 10%;
+  --popover-foreground: 36 18% 94%;
+  --primary: 27 92% 63%;
+  --primary-foreground: 30 8% 8%;
+  --secondary: 30 6% 16%;
+  --secondary-foreground: 36 18% 94%;
+  --muted: 30 6% 16%;
+  --muted-foreground: 36 8% 62%;
+  --accent: 30 6% 18%;
+  --accent-foreground: 36 18% 94%;
+  --destructive: 16 55% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 30 6% 18%;
+  --input: 30 6% 18%;
+  --ring: 27 92% 63%;
+  --sidebar: 30 8% 6%;
+  --sidebar-foreground: 36 18% 94%;
+  --sidebar-primary: 27 92% 63%;
+  --sidebar-primary-foreground: 30 8% 8%;
+  --sidebar-accent: 30 6% 14%;
+  --sidebar-accent-foreground: 36 18% 94%;
+  --sidebar-border: 30 6% 14%;
+  --sidebar-ring: 27 92% 63%;
 }
 
-* {
-  border-color: hsl(var(--border));
-}
+* { border-color: hsl(var(--border)); }
 
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Roboto, sans-serif;
+  font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   user-select: none;
+  font-feature-settings: "ss01", "cv01";
 }
+
+::selection { background: hsl(var(--primary) / 0.18); color: hsl(var(--primary) / 0.9); }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground) / 0.3); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
+::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground) / 0.25); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.45); }
 
+/* ========== 字体族工具类 ========== */
+.font-display { font-family: 'Bricolage Grotesque', 'Inter Tight', sans-serif; letter-spacing: -0.02em; }
+.font-mono { font-family: 'JetBrains Mono', monospace; font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
+
+/* ========== 按钮体系 · 5 个状态机 ========== */
 .btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50;
+  border-radius: 999px;
+  padding: 8px 16px;
+  height: 36px;
+  transition: transform .25s var(--ease-spring), background-color .2s ease, box-shadow .25s var(--ease-spring), color .2s ease;
+  position: relative;
+  overflow: hidden;
+  will-change: transform;
 }
+.btn:active { transform: translateY(0) scale(0.97); }
+
 .btn-primary {
-  @apply btn bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4;
+  @apply btn text-primary-foreground;
+  background: linear-gradient(135deg, hsl(27 92% 65%), hsl(27 92% 58%));
+  box-shadow: 0 4px 12px hsl(27 92% 63% / 0.28), inset 0 1px 0 rgba(255,255,255,0.32);
 }
+.btn-primary:hover {
+  background: linear-gradient(135deg, hsl(27 92% 60%), hsl(27 92% 52%));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px hsl(27 92% 63% / 0.34), inset 0 1px 0 rgba(255,255,255,0.32);
+}
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.45) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0;
+  pointer-events: none;
+}
+.btn-primary:hover::after { transform: translateX(120%); transition: transform .7s var(--ease-spring); }
+
 .btn-secondary {
-  @apply btn bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-4;
+  @apply btn bg-secondary text-secondary-foreground;
 }
+.btn-secondary:hover { background: hsl(36 30% 91%); transform: translateY(-1px); }
+
 .btn-outline {
-  @apply btn border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4;
+  @apply btn border bg-background text-foreground;
+  border-color: hsl(var(--border));
 }
+.btn-outline:hover { background: hsl(var(--accent)); border-color: hsl(var(--muted-foreground) / 0.3); transform: translateY(-1px); }
+
 .btn-ghost {
-  @apply btn hover:bg-accent hover:text-accent-foreground h-9 px-3;
+  @apply btn text-foreground;
+  background: transparent;
 }
+.btn-ghost:hover { background: hsl(var(--accent)); }
+
 .btn-destructive {
-  @apply btn bg-destructive text-destructive-foreground hover:bg-destructive/90 h-9 px-4;
+  @apply btn text-destructive-foreground;
+  background: hsl(var(--destructive));
+  box-shadow: 0 4px 12px hsl(var(--destructive) / 0.25);
 }
-.btn-sm { @apply h-8 px-3 text-xs; }
-.btn-icon { @apply h-9 w-9 p-0; }
+.btn-destructive:hover { background: hsl(16 65% 50%); transform: translateY(-1px); }
 
+.btn-cool {
+  @apply btn text-white;
+  background: linear-gradient(135deg, hsl(165 21% 60%), hsl(165 21% 50%));
+  box-shadow: 0 4px 12px hsl(165 21% 57% / 0.28), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.btn-cool:hover { transform: translateY(-1px); box-shadow: 0 6px 18px hsl(165 21% 57% / 0.34), inset 0 1px 0 rgba(255,255,255,0.25); }
+
+.btn-sm { height: 30px; padding: 5px 12px; font-size: 12px; }
+.btn-icon { width: 36px; padding: 0; }
+.btn-icon.btn-sm { width: 30px; }
+.btn-lg { height: 44px; padding: 12px 22px; font-size: 14.5px; }
+
+/* ========== 输入 / 文本域 ========== */
 .input {
-  @apply flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+  @apply flex h-9 w-full border bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+  border-radius: 10px;
+  border-color: hsl(var(--input));
+  transition: border-color .2s ease, box-shadow .25s var(--ease-spring);
 }
+.input:focus { box-shadow: 0 0 0 3px hsl(var(--primary) / 0.14); }
 .textarea {
-  @apply flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
+  @apply flex min-h-[80px] w-full border bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
+  border-radius: 10px;
+  border-color: hsl(var(--input));
 }
-.label {
-  @apply text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
-}
+.label { @apply text-sm font-medium leading-none; }
+
+/* ========== 卡片 · 含 hover 微动效 ========== */
 .card {
-  @apply rounded-lg border bg-card text-card-foreground shadow-sm;
+  @apply bg-card text-card-foreground;
+  border-radius: 14px;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 0 hsl(30 11% 16% / 0.025);
+  transition: transform .35s var(--ease-spring), box-shadow .35s var(--ease-spring), border-color .3s ease;
+}
+.card-hover {
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.card-hover::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(165 21% 57%));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .4s var(--ease-spring);
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px -14px hsl(30 11% 16% / 0.18), 0 0 0 1px hsl(var(--border));
+  border-color: transparent;
+}
+.card-hover:hover::before { transform: scaleX(1); }
+
+/* ========== 浅色 section 容器（替代原 bg-black/[0.02]） ========== */
+.surface {
+  background: hsl(var(--muted) / 0.5);
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
 }
 
+/* ========== Markdown 排版 ========== */
 .markdown-body { user-select: text; line-height: 1.7; }
-.markdown-body h1 { @apply text-2xl font-bold mt-6 mb-4; }
-.markdown-body h2 { @apply text-xl font-semibold mt-5 mb-3; }
+.markdown-body h1 { @apply text-2xl font-bold mt-6 mb-4 font-display; }
+.markdown-body h2 { @apply text-xl font-semibold mt-5 mb-3 font-display; }
 .markdown-body h3 { @apply text-lg font-medium mt-4 mb-2; }
 .markdown-body p { @apply my-3; }
 .markdown-body ul { @apply list-disc pl-6 my-3; }
@@ -130,7 +255,87 @@ body {
 .markdown-body code { @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono; }
 .markdown-body pre { @apply bg-muted p-4 rounded-md overflow-x-auto my-4; }
 .markdown-body pre code { @apply bg-transparent p-0; }
-.markdown-body blockquote { @apply border-l-4 border-primary/40 pl-4 italic text-muted-foreground my-3; }
+.markdown-body blockquote { @apply border-l-4 pl-4 italic text-muted-foreground my-3; border-color: hsl(var(--primary) / 0.4); }
 .markdown-body table { @apply w-full border-collapse my-4; }
 .markdown-body th, .markdown-body td { @apply border border-border px-3 py-2 text-left; }
 .markdown-body th { @apply bg-muted font-semibold; }
+
+/* ========== 标签 chip ========== */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary) / 0.95);
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.02em;
+}
+.chip-cool { background: hsl(165 21% 57% / 0.14); color: hsl(165 30% 32%); }
+.chip-neutral { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+.chip-good { background: hsl(140 25% 92%); color: hsl(140 30% 28%); }
+.chip-warn { background: hsl(36 60% 92%); color: hsl(28 50% 32%); }
+
+/* ========== REC 录制状态点 ========== */
+@keyframes pulse-rec {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(16 65% 56% / 0.55); }
+  50% { box-shadow: 0 0 0 7px hsl(16 65% 56% / 0); }
+}
+.dot-rec {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: hsl(var(--muted-foreground) / 0.4);
+  transition: background .3s ease;
+}
+.dot-rec.live {
+  background: hsl(16 65% 56%);
+  animation: pulse-rec 1.5s ease-in-out infinite;
+}
+
+/* ========== Skeleton shimmer ========== */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skel {
+  background: linear-gradient(90deg, hsl(36 26% 89%) 0%, hsl(36 30% 94%) 50%, hsl(36 26% 89%) 100%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* ========== 入场动效（list stagger） ========== */
+@keyframes flyIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal { animation: flyIn .55s var(--ease-spring) both; }
+.reveal-1 { animation-delay: .05s; }
+.reveal-2 { animation-delay: .12s; }
+.reveal-3 { animation-delay: .19s; }
+.reveal-4 { animation-delay: .26s; }
+
+/* ========== 屏蔽原生 resize 控件（避免 textarea / input 出现拖拽手柄） ========== */
+textarea, input[type="text"], input[type="search"], input[type="email"], input[type="url"] {
+  resize: none;
+}
+textarea { min-height: 80px; }
+
+/* ========== 路由切换 transition（router-view） ========== */
+.fade-enter-active, .fade-leave-active { transition: opacity .25s var(--ease-spring), transform .35s var(--ease-spring); }
+.fade-enter-from { opacity: 0; transform: translateY(6px); }
+.fade-leave-to { opacity: 0; transform: translateY(-4px); }
+
+/* ========== Reduced motion 兜底 ========== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal { animation: none; opacity: 1; }
+}

@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>字体搭配对比 · 4 套候选</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Inter+Tight:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* 基础：柑橘亮 + 薄荷（已选定） */
+  :root {
+    --bg: #FCFBF7;
+    --surface: #FFFFFF;
+    --surface-2: #F6F2E9;
+    --surface-3: #ECE6D6;
+    --border: #ECE7DA;
+    --text: #2C2A26;
+    --text-2: #6E6557;
+    --text-3: #A39B8B;
+    --accent: #F5A04D;
+    --accent-2: #F8B889;
+    --accent-soft: rgba(245, 160, 77, .12);
+    --accent-light: #FCE0CA;
+    --cool-1: #7AAA9B;
+    --cool-light: #E8F0EC;
+    --cool-soft: rgba(122, 170, 155, .18);
+    --good: #6B9B7E;
+    --good-light: #E5F0E8;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;letter-spacing:inherit}
+
+  .head{padding:40px 32px 24px;max-width:1480px;margin:0 auto}
+  .head .crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px}
+  .head h1{font-size:30px;font-weight:700;letter-spacing:-0.02em;margin:0 0 8px;color:var(--text)}
+  .head .sub{color:var(--text-2);font-size:14px;max-width:780px;line-height:1.6}
+  .head .accent-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;background:var(--accent-light);color:var(--accent);border-radius:999px;font-size:11px;font-weight:700;margin-top:14px;letter-spacing:0.04em}
+  .head .accent-pill .sw{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px rgba(245,160,77,.18)}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:1480px;margin:0 auto;padding:24px 32px 80px}
+
+  .col{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 0 rgba(44,42,38,.02)}
+
+  .col-h{padding:16px 18px;border-bottom:1px solid var(--border);background:#F9F6EE;display:flex;flex-direction:column;gap:8px}
+  .col-h .num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.1em;text-transform:uppercase;font-weight:600}
+  .col-h .lbl{font-weight:700;font-size:15px;letter-spacing:-0.005em;color:var(--text);line-height:1.2}
+  .col-h .lbl .en{font-weight:500;color:var(--text-3);font-size:11px;display:block;margin-top:2px;letter-spacing:0}
+  .col-h .meta{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+  .col-h .meta .k{padding:2px 7px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-size:10px;color:var(--text-2);font-weight:500}
+
+  .col-body{padding:18px;display:flex;flex-direction:column;gap:18px}
+
+  /* Demo blocks */
+  .demo{display:flex;flex-direction:column;gap:6px}
+  .demo .ttl{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;font-weight:600}
+
+  /* Headline sample */
+  .h-display{font-size:30px;line-height:1.1;letter-spacing:-0.02em;font-weight:600;color:var(--text)}
+  .h-display .it{font-style:italic;font-weight:500;color:var(--accent)}
+
+  .h-greet{font-size:20px;line-height:1.2;letter-spacing:-0.015em;font-weight:700;color:var(--text)}
+  .h-greet .it{font-style:italic;font-weight:600;color:var(--accent)}
+
+  .body{font-size:13px;line-height:1.6;color:var(--text-2)}
+  .body strong{color:var(--text);font-weight:600}
+
+  .body-sm{font-size:11.5px;line-height:1.55;color:var(--text-2)}
+
+  /* Mono sample */
+  .mono-l{font-size:32px;line-height:1;letter-spacing:-0.02em;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+  .mono-l .u{font-size:13px;color:var(--text-3);margin-left:3px;font-weight:500}
+  .mono-s{font-size:11px;line-height:1.5;color:var(--text-3);font-weight:500;letter-spacing:0.02em}
+
+  /* UI elements */
+  .btn-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+  .btn{padding:5px 10px;border-radius:6px;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:4px;border:1px solid transparent}
+  .btn.solid{background:var(--accent);color:#fff;box-shadow:0 1px 0 rgba(245,160,77,.18)}
+  .btn.outline{background:transparent;border-color:var(--border);color:var(--text)}
+  .btn.ghost{background:transparent;color:var(--text-2)}
+
+  .pills{display:flex;flex-wrap:wrap;gap:4px}
+  .pill{padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:600;background:rgba(255,255,255,.7);color:var(--text-2);border:1px solid var(--cool-soft);display:inline-flex;align-items:center;gap:4px}
+  .pill svg{width:9px;height:9px;stroke-width:2.5;color:var(--good)}
+
+  .tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10.5px;font-weight:600;background:var(--cool-light);color:var(--cool-1)}
+
+  .live{display:inline-flex;align-items:center;gap:5px;padding:2px 7px;background:var(--good-light);color:var(--good);border-radius:4px;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600}
+  .live .dot{width:5px;height:5px;border-radius:50%;background:var(--good)}
+
+  .check-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--text)}
+  .check{width:14px;height:14px;border:1.5px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;background:var(--surface);flex:none}
+  .check.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .check svg{width:9px;height:9px;stroke-width:3;opacity:0}
+  .check.on svg{opacity:1}
+
+  /* Spans for character test */
+  .char-test{font-size:18px;line-height:1.5;color:var(--text);font-weight:500}
+  .char-test .num{font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
+  .char-test .en{color:var(--text-2);font-weight:400}
+
+  .note{font-size:10.5px;color:var(--text-3);font-style:italic;line-height:1.5;padding:8px 10px;background:var(--surface-2);border-radius:6px;border-left:2px solid var(--accent)}
+</style>
+
+<!-- FONT ASSIGNMENT PER COLUMN -->
+<style>
+  /* 1. Plus Jakarta Sans (current) */
+  .col.c1{--f-display:'Plus Jakarta Sans',sans-serif;--f-body:'Plus Jakarta Sans',sans-serif;--f-mono:'JetBrains Mono',monospace}
+  .col.c1 .h-display, .col.c1 .h-greet, .col.c1 .body, .col.c1 .body-sm, .col.c1 .btn, .col.c1 .pill, .col.c1 .tag, .col.c1 .live, .col.c1 .char-test{font-family:var(--f-body)}
+  .col.c1 .h-display{font-weight:800}
+  .col.c1 .h-greet{font-weight:700}
+  .col.c1 .mono-l, .col.c1 .mono-s, .col.c1 .ttl, .col.c1 .num, .col.c1 .col-h .num{font-family:var(--f-mono)}
+
+  /* 2. Geist */
+  .col.c2{--f-display:'Geist',sans-serif;--f-body:'Geist',sans-serif;--f-mono:'Geist Mono',monospace}
+  .col.c2 .h-display, .col.c2 .h-greet, .col.c2 .body, .col.c2 .body-sm, .col.c2 .btn, .col.c2 .pill, .col.c2 .tag, .col.c2 .live, .col.c2 .char-test{font-family:var(--f-body)}
+  .col.c2 .h-display{font-weight:600;letter-spacing:-0.025em}
+  .col.c2 .h-greet{font-weight:600;letter-spacing:-0.02em}
+  .col.c2 .mono-l, .col.c2 .mono-s, .col.c2 .ttl, .col.c2 .num, .col.c2 .col-h .num{font-family:var(--f-mono)}
+  .col.c2 .char-test{font-feature-settings:'ss01'}
+
+  /* 3. Bricolage Grotesque + Inter Tight */
+  .col.c3{--f-display:'Bricolage Grotesque',serif;--f-body:'Inter Tight',sans-serif;--f-mono:'JetBrains Mono',monospace}
+  .col.c3 .h-display, .col.c3 .h-greet{font-family:var(--f-display);font-variation-settings:'opsz' 48;font-weight:600;letter-spacing:-0.03em}
+  .col.c3 .body, .col.c3 .body-sm, .col.c3 .btn, .col.c3 .pill, .col.c3 .tag, .col.c3 .live, .col.c3 .char-test{font-family:var(--f-body)}
+  .col.c3 .h-display{font-weight:700}
+  .col.c3 .h-greet{font-weight:600}
+  .col.c3 .mono-l, .col.c3 .mono-s, .col.c3 .ttl, .col.c3 .num, .col.c3 .col-h .num{font-family:var(--f-mono)}
+
+  /* 4. Manrope + IBM Plex Mono */
+  .col.c4{--f-display:'Manrope',sans-serif;--f-body:'Manrope',sans-serif;--f-mono:'IBM Plex Mono',monospace}
+  .col.c4 .h-display, .col.c4 .h-greet, .col.c4 .body, .col.c4 .body-sm, .col.c4 .btn, .col.c4 .pill, .col.c4 .tag, .col.c4 .live, .col.c4 .char-test{font-family:var(--f-body)}
+  .col.c4 .h-display{font-weight:700;letter-spacing:-0.02em}
+  .col.c4 .h-greet{font-weight:700;letter-spacing:-0.015em}
+  .col.c4 .mono-l, .col.c4 .mono-s, .col.c4 .ttl, .col.c4 .num, .col.c4 .col-h .num{font-family:var(--f-mono);font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div class="crumb">// font_pairing · 2026-06-27</div>
+  <h1>4 套字体搭配 · 配柑橘亮 + 薄荷</h1>
+  <p class="sub">底色和 accent 都已锁定为方向 2 暖技术风 + 柑橘亮主色。这里只换字体，每一列展示同一段内容（标题、问候、列表、统计、按钮、状态）在不同字体下的气质。中文一律走系统字体（PingFang SC / Microsoft YaHei），英数和符号用指定字体。</p>
+  <div class="accent-pill"><span class="sw"></span>已选主色 · 柑橘亮 #F5A04D + 薄荷 #7AAA9B</div>
+</div>
+
+<div class="grid">
+
+  <!-- C1: Plus Jakarta Sans -->
+  <div class="col c1">
+    <div class="col-h">
+      <div class="num">// 01</div>
+      <div class="lbl">Plus Jakarta Sans<span class="en">活力青年 · 当前方向</span></div>
+      <div class="meta">
+        <span class="k">Display: Jakarta 800</span>
+        <span class="k">Body: Jakarta 400</span>
+        <span class="k">Mono: JetBrains</span>
+      </div>
+    </div>
+    <div class="col-body">
+
+      <div class="demo">
+        <div class="ttl">// 大标题</div>
+        <div class="h-display">今天，你<span class="it">做了什么</span>。</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 问候</div>
+        <div class="h-greet">下午好，<span class="it">Shiping</span>。</div>
+        <div class="body-sm">今天 2 / 3 计划已完成，专注 4.2 小时。</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 正文</div>
+        <div class="body">在 <strong>Vue 3</strong> 中实现流式报告 Markdown 渲染组件，处理 chunk 拼接时的边界问题。</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 列表</div>
+        <div class="check-row"><div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>整理日报助手需求文档 V2.1</div>
+        <div class="check-row"><div class="check"></div>完成模板编辑器交互</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 统计 (mono)</div>
+        <div class="mono-l">4.2<span class="u">h</span></div>
+        <div class="mono-s">// focused_today</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 字符测试</div>
+        <div class="char-test">
+          AaBbCc 0123 <span class="num">47.2%</span> <span class="en">→ 引用</span> 「你好」 重要
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 按钮 / 标签 / 状态</div>
+        <div class="btn-row" style="margin-bottom:8px">
+          <span class="btn solid">开始记录</span>
+          <span class="btn outline">次要</span>
+          <span class="btn ghost">幽灵</span>
+        </div>
+        <div class="pills" style="margin-bottom:8px">
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销毁</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span class="tag">开发</span>
+          <span class="live"><span class="dot"></span>rec · recording</span>
+        </div>
+      </div>
+
+      <div class="note">Jakarta 在 800 字重下有"厚实的圆润感"，是 4 套里最匹配柑橘亮活泼气质的。中文需要系统字体兜底。</div>
+
+    </div>
+  </div>
+
+  <!-- C2: Geist -->
+  <div class="col c2">
+    <div class="col-h">
+      <div class="num">// 02</div>
+      <div class="lbl">Geist<span class="en">技术工具感 · Vercel 出品</span></div>
+      <div class="meta">
+        <span class="k">Display: Geist 600</span>
+        <span class="k">Body: Geist 400</span>
+        <span class="k">Mono: Geist Mono</span>
+      </div>
+    </div>
+    <div class="col-body">
+
+      <div class="demo">
+        <div class="ttl">// 大标题</div>
+        <div class="h-display">今天，你<span class="it">做了什么</span>。</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 问候</div>
+        <div class="h-greet">下午好，<span class="it">Shiping</span>。</div>
+        <div class="body-sm">今天 2 / 3 计划已完成，专注 4.2 小时。</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 正文</div>
+        <div class="body">在 <strong>Vue 3</strong> 中实现流式报告 Markdown 渲染组件，处理 chunk 拼接时的边界问题。</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 列表</div>
+        <div class="check-row"><div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>整理日报助手需求文档 V2.1</div>
+        <div class="check-row"><div class="check"></div>完成模板编辑器交互</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 统计 (mono)</div>
+        <div class="mono-l">4.2<span class="u">h</span></div>
+        <div class="mono-s">// focused_today</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 字符测试</div>
+        <div class="char-test">
+          AaBbCc 0123 <span class="num">47.2%</span> <span class="en">→ 引用</span> 「你好」 重要
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 按钮 / 标签 / 状态</div>
+        <div class="btn-row" style="margin-bottom:8px">
+          <span class="btn solid">开始记录</span>
+          <span class="btn outline">次要</span>
+          <span class="btn ghost">幽灵</span>
+        </div>
+        <div class="pills" style="margin-bottom:8px">
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销毁</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span class="tag">开发</span>
+          <span class="live"><span class="dot"></span>rec · recording</span>
+        </div>
+      </div>
+
+      <div class="note">Geist 是 Vercel 的工程师字体，字形偏冷峻理性。和柑橘亮搭配会有"工具里藏温度"的感觉。mono 用 Geist Mono 视觉统一度最高。</div>
+
+    </div>
+  </div>
+
+  <!-- C3: Bricolage + Inter Tight -->
+  <div class="col c3">
+    <div class="col-h">
+      <div class="num">// 03</div>
+      <div class="lbl">Bricolage Grotesque<span class="en">现代 + 细节变化</span></div>
+      <div class="meta">
+        <span class="k">Display: Bricolage 700</span>
+        <span class="k">Body: Inter Tight 400</span>
+        <span class="k">Mono: JetBrains</span>
+      </div>
+    </div>
+    <div class="col-body">
+
+      <div class="demo">
+        <div class="ttl">// 大标题</div>
+        <div class="h-display">今天，你<span class="it">做了什么</span>。</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 问候</div>
+        <div class="h-greet">下午好，<span class="it">Shiping</span>。</div>
+        <div class="body-sm">今天 2 / 3 计划已完成，专注 4.2 小时。</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 正文</div>
+        <div class="body">在 <strong>Vue 3</strong> 中实现流式报告 Markdown 渲染组件，处理 chunk 拼接时的边界问题。</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 列表</div>
+        <div class="check-row"><div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>整理日报助手需求文档 V2.1</div>
+        <div class="check-row"><div class="check"></div>完成模板编辑器交互</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 统计 (mono)</div>
+        <div class="mono-l">4.2<span class="u">h</span></div>
+        <div class="mono-s">// focused_today</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 字符测试</div>
+        <div class="char-test">
+          AaBbCc 0123 <span class="num">47.2%</span> <span class="en">→ 引用</span> 「你好」 重要
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 按钮 / 标签 / 状态</div>
+        <div class="btn-row" style="margin-bottom:8px">
+          <span class="btn solid">开始记录</span>
+          <span class="btn outline">次要</span>
+          <span class="btn ghost">幽灵</span>
+        </div>
+        <div class="pills" style="margin-bottom:8px">
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销毁</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span class="tag">开发</span>
+          <span class="live"><span class="dot"></span>rec · recording</span>
+        </div>
+      </div>
+
+      <div class="note">Bricolage 有 optical size 变化，标题用 48 字号变体时字形会"张开"，正文用 12 字号变体时收紧。和 Inter Tight 配合，是 4 套里最"有节制的设计感"的。</div>
+
+    </div>
+  </div>
+
+  <!-- C4: Manrope + IBM Plex Mono -->
+  <div class="col c4">
+    <div class="col-h">
+      <div class="num">// 04</div>
+      <div class="lbl">Manrope<span class="en">圆润 · 偏消费者</span></div>
+      <div class="meta">
+        <span class="k">Display: Manrope 700</span>
+        <span class="k">Body: Manrope 400</span>
+        <span class="k">Mono: IBM Plex Mono</span>
+      </div>
+    </div>
+    <div class="col-body">
+
+      <div class="demo">
+        <div class="ttl">// 大标题</div>
+        <div class="h-display">今天，你<span class="it">做了什么</span>。</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 问候</div>
+        <div class="h-greet">下午好，<span class="it">Shiping</span>。</div>
+        <div class="body-sm">今天 2 / 3 计划已完成，专注 4.2 小时。</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 正文</div>
+        <div class="body">在 <strong>Vue 3</strong> 中实现流式报告 Markdown 渲染组件，处理 chunk 拼接时的边界问题。</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 列表</div>
+        <div class="check-row"><div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>整理日报助手需求文档 V2.1</div>
+        <div class="check-row"><div class="check"></div>完成模板编辑器交互</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 统计 (mono)</div>
+        <div class="mono-l">4.2<span class="u">h</span></div>
+        <div class="mono-s">// focused_today</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 字符测试</div>
+        <div class="char-test">
+          AaBbCc 0123 <span class="num">47.2%</span> <span class="en">→ 引用</span> 「你好」 重要
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// 按钮 / 标签 / 状态</div>
+        <div class="btn-row" style="margin-bottom:8px">
+          <span class="btn solid">开始记录</span>
+          <span class="btn outline">次要</span>
+          <span class="btn ghost">幽灵</span>
+        </div>
+        <div class="pills" style="margin-bottom:8px">
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销毁</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span class="tag">开发</span>
+          <span class="live"><span class="dot"></span>rec · recording</span>
+        </div>
+      </div>
+
+      <div class="note">Manrope 圆润温暖，IBM Plex Mono 偏几何。两者反差最大，让界面有"亲切的字 + 严肃的数字"的对话感。最不像工具感，最像 consumer app。</div>
+
+    </div>
+  </div>
+
+</div>
+
+<div style="max-width:1480px;margin:0 auto;padding:0 32px 80px">
+  <div style="background:#FFFFFF;border:1px solid #ECE7DA;border-radius:14px;padding:24px 28px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px">
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">1 · Jakarta</div>
+      <div style="font-size:12px;color:var(--text-2);line-height:1.55">最匹配柑橘亮的活泼感。适合年轻产品、自媒体、初创。已用着的话不用换。</div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">2 · Geist</div>
+      <div style="font-size:12px;color:var(--text-2);line-height:1.55">冷峻理性，工具感最强。如果你的用户偏工程师/技术决策者，选这个。</div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">3 · Bricolage</div>
+      <div style="font-size:12px;color:var(--text-2);line-height:1.55">有节制的设计感，标题和小字会变形。最有"被设计过"的气质，适合内容型产品。</div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">4 · Manrope</div>
+      <div style="font-size:12px;color:var(--text-2);line-height:1.55">圆润温暖，最不像工具感。如果"暖技术"里"暖"字比"技术"重，选这个。</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

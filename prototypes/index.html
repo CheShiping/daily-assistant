@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>牙牙乐 · 设计原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#0A0A0B;color:#fff;font-family:'Inter Tight',-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5}
+  .mono{font-family:'JetBrains Mono',monospace}
+  a{color:inherit;text-decoration:none}
+
+  .wrap{max-width:1200px;margin:0 auto;padding:60px 40px 100px}
+
+  .top{margin-bottom:60px}
+  .top .crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6B75;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px}
+  .top h1{font-size:42px;font-weight:600;letter-spacing:-0.025em;margin:0 0 12px;line-height:1.1}
+  .top h1 .it{font-style:italic;font-weight:500;color:#A0A0A8}
+  .top .sub{color:#A0A0A8;font-size:15px;max-width:680px;line-height:1.55}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:36px}
+  .card{background:#14141A;border:1px solid #1F1F25;border-radius:14px;padding:28px 28px 32px;display:flex;flex-direction:column;gap:14px;transition:all .2s}
+  .card:hover{border-color:#34343C;background:#181820;transform:translateY(-2px)}
+  .card .head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .card .head .num{font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6B75;letter-spacing:0.08em}
+  .card .head .tag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 8px;background:#1A1A22;border:1px solid #26262E;border-radius:4px;color:#A0A0A8;letter-spacing:0.04em;text-transform:uppercase;font-weight:600}
+  .card h2{font-size:22px;font-weight:600;letter-spacing:-0.015em;margin:0;line-height:1.2}
+  .card h2 .it{font-style:italic;color:#A0A0A8;font-weight:500}
+  .card .desc{color:#A0A0A8;font-size:13px;line-height:1.55;margin:0}
+  .card .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .card .meta .k{font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:3px 8px;background:#1A1A22;color:#A0A0A8;border-radius:4px;letter-spacing:0.04em}
+
+  .card .open{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:18px;border-top:1px solid #1F1F25}
+  .card .open .url{font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6B75;letter-spacing:0.04em}
+  .card .open .go{font-size:12px;font-weight:600;color:#fff;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#fff;color:#0A0A0B;border-radius:6px}
+  .card .open .go svg{width:11px;height:11px;stroke-width:2.5}
+
+  .full{grid-column:1 / -1}
+  .card.full .head .tag{background:rgba(94,106,210,.12);color:#7B85E5;border-color:rgba(94,106,210,.3)}
+
+  .leg{margin-top:64px;padding:24px 28px;background:#14141A;border:1px solid #1F1F25;border-radius:12px}
+  .leg h3{font-size:11px;font-weight:600;color:#6B6B75;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 14px;font-family:'JetBrains Mono',monospace}
+  .leg p{color:#A0A0A8;font-size:13px;line-height:1.6;margin:0 0 8px}
+  .leg p:last-child{margin-bottom:0}
+
+  .pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:#16A34A;margin-right:6px;vertical-align:middle;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(22,163,74,.4)}50%{opacity:.6;box-shadow:0 0 0 6px rgba(22,163,74,0)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="crumb">// design_review · 2026-06-27</div>
+    <h1>牙牙乐日报助手 · <span class="it">设计系统改版原型</span></h1>
+    <p class="sub">5 个独立 HTML 文件，基于现有 Vue 3 + Tailwind 项目改造的设计语言预览。同一份数据，不同的设计方向与配色。每个文件直接浏览器打开即可。</p>
+  </div>
+
+  <div class="grid">
+
+    <a class="card" href="direction-1-linear.html">
+      <div class="head">
+        <div class="num">// 01</div>
+        <div class="tag">VARIANCE 5 · MOTION 3 · DENSITY 3</div>
+      </div>
+      <h2>Linear <span class="it">极简克制</span></h2>
+      <p class="desc">大量留白，无装饰线，单一重点 accent。Linear / Vercel / Things 3 那一脉。最像生产力工具的默认审美，改造工作量小，主要是清理。</p>
+      <div class="meta">
+        <span class="k">Inter Tight</span>
+        <span class="k">JetBrains Mono</span>
+        <span class="k">#5E6AD2</span>
+        <span class="k">无 shadow</span>
+      </div>
+      <div class="open">
+        <span class="url">prototypes/direction-1-linear.html</span>
+        <span class="go">打开 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>
+      </div>
+    </a>
+
+    <a class="card" href="direction-2-warm.html">
+      <div class="head">
+        <div class="num">// 02</div>
+        <div class="tag">VARIANCE 6 · MOTION 5 · DENSITY 4</div>
+      </div>
+      <h2>Notion Calendar <span class="it">暖技术</span></h2>
+      <p class="desc">更暖更人味，圆角偏软，米白纸张感，搜索条 + 头像。Notion Calendar / Cron / Things 3 那一脉。比 Linear 多一点个性。</p>
+      <div class="meta">
+        <span class="k">Plus Jakarta Sans</span>
+        <span class="k">#C95A3A</span>
+        <span class="k">soft shadow</span>
+        <span class="k">bento stats</span>
+      </div>
+      <div class="open">
+        <span class="url">prototypes/direction-2-warm.html</span>
+        <span class="go">打开 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>
+      </div>
+    </a>
+
+    <a class="card" href="direction-3-industrial.html">
+      <div class="head">
+        <div class="num">// 03</div>
+        <div class="tag">VARIANCE 5 · MOTION 4 · DENSITY 6</div>
+      </div>
+      <h2>Raycast <span class="it">工业风</span></h2>
+      <p class="desc">暗色为主，超窄 60px 侧边栏，数字 / 状态用 mono，状态指示有真语义色。Raycast / Linear Dark / Vercel 工程师视角。</p>
+      <div class="meta">
+        <span class="k">Geist + Geist Mono</span>
+        <span class="k">#FF7A45</span>
+        <span class="k">#0C0C0D bg</span>
+        <span class="k">1px border</span>
+      </div>
+      <div class="open">
+        <span class="url">prototypes/direction-3-industrial.html</span>
+        <span class="go">打开 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>
+      </div>
+    </a>
+
+    <a class="card" href="direction-4-editorial.html">
+      <div class="head">
+        <div class="num">// 04</div>
+        <div class="tag">VARIANCE 8 · MOTION 5 · DENSITY 3</div>
+      </div>
+      <h2>Editorial <span class="it">杂志</span></h2>
+      <p class="desc">大字号 + 衬线体 + drop-cap + 罗马数字，纸张感背景。最有辨识度，改造幅度最大。适合想做"独立产品感"的方向。</p>
+      <div class="meta">
+        <span class="k">Cormorant Garamond</span>
+        <span class="k">Inter Tight</span>
+        <span class="k">#6B2C1B</span>
+        <span class="k">paper bg</span>
+      </div>
+      <div class="open">
+        <span class="url">prototypes/direction-4-editorial.html</span>
+        <span class="go">打开 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>
+      </div>
+    </a>
+
+    <a class="card full" href="color-compare.html">
+      <div class="head">
+        <div class="num">// 05 · COLOR</div>
+        <div class="tag">A/B · SAME LAYOUT · 4 ACCENTS</div>
+      </div>
+      <h2>配色对比 <span class="it">同一个版式 · 4 种主色实测</span></h2>
+      <p class="desc">用方向 1 的版式做载体，4 列横向并排，依次替换主色 accent。让你直接对比在相同设计语言下不同色彩对界面气质的影响。每列包含 active nav、按钮组、hero、信任 pill、checkbox、tag、stat、bars、live status 共 9 个核心元素。</p>
+      <div class="meta">
+        <span class="k">#16A34A emerald</span>
+        <span class="k">#5E6AD2 electric blue</span>
+        <span class="k">#C95A3A amber</span>
+        <span class="k">#F76B6B mono accent</span>
+      </div>
+      <div class="open">
+        <span class="url">prototypes/color-compare.html</span>
+        <span class="go">打开 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="leg">
+    <h3>// NOTES</h3>
+    <p><span class="pulse"></span>5 个 HTML 是完全独立的，不依赖 npm 启动。直接双击 <code class="mono" style="color:#A0A0A8">prototypes/index.html</code>，或在浏览器地址栏输入 <code class="mono" style="color:#A0A0A8">file:///e:/Users/Shiping/daily-assistant/prototypes/direction-1-linear.html</code>。</p>
+    <p>原型用的是真实组件位置（侧边栏、Hero、计划、统计、记录、时段、显示器），但视觉是完全独立的，方便你专注感受"设计语言"而不是被现有功能束缚。</p>
+    <p>选定方向 + 配色后，我会基于此在真实 Vue 项目里改 token + 关键组件，预计分 2 轮迭代：第一轮换 token + 字体 + 主页 4 个 section，第二轮改造所有 view 的细节和交互。</p>
+  </div>
+</div>
+</body>
+</html>

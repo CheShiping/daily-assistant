@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>配色对比 · 4 种主色实测</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#0F0F11;color:#fff;font-family:'Inter Tight',-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased;font-size:13px;line-height:1.5}
+  .mono{font-family:'JetBrains Mono',monospace}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;font-family:inherit}
+
+  .head{padding:40px 32px 24px;border-bottom:1px solid #1F1F23;max-width:1480px;margin:0 auto}
+  .head .crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6B75;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px}
+  .head h1{font-size:32px;font-weight:600;letter-spacing:-0.02em;margin:0 0 8px}
+  .head .sub{color:#A0A0A8;font-size:14px;max-width:680px}
+  .head .hint{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}
+  .head .hint .b{padding:4px 10px;background:#1A1A1E;border:1px solid #26262B;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#A0A0A8;letter-spacing:0.04em}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:1480px;margin:0 auto;padding:24px 32px 80px}
+
+  .col{background:#16161A;border:1px solid #1F1F23;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+  .col-h{padding:14px 16px;border-bottom:1px solid #1F1F23;display:flex;align-items:center;justify-content:space-between;gap:8px;background:#0F0F11}
+  .col-h .l{display:flex;align-items:center;gap:10px}
+  .col-h .sw{width:24px;height:24px;border-radius:6px;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+  .col-h .lbl{font-weight:600;font-size:13px;letter-spacing:-0.005em}
+  .col-h .hex{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#6B6B75;letter-spacing:0.04em}
+
+  .col-body{padding:14px;display:flex;flex-direction:column;gap:14px}
+
+  /* Demo pieces - shared */
+  .demo{background:#0F0F11;border:1px solid #1F1F23;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+  .demo .ttl{font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6B75;letter-spacing:0.08em;text-transform:uppercase;font-weight:600}
+
+  /* Nav active */
+  .nv{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:6px;font-size:12px;font-weight:500;color:#A0A0A8}
+  .nv.on{background:#1A1A1E;color:#fff;font-weight:600}
+  .nv.on .dot{background:var(--c)}
+  .nv .dot{width:5px;height:5px;border-radius:50%;background:transparent}
+  .nv svg{width:13px;height:13px;stroke-width:1.6;flex:none}
+
+  /* Buttons */
+  .btns{display:flex;gap:6px;flex-wrap:wrap}
+  .btn{padding:6px 10px;border-radius:6px;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:5px;border:1px solid transparent;transition:all .12s}
+  .btn.solid{background:var(--c);color:#fff}
+  .btn.solid.dark{color:#0F0F11}
+  .btn.outline{background:transparent;border-color:#26262B;color:#fff}
+  .btn.ghost{background:transparent;color:#A0A0A8}
+  .btn svg{width:11px;height:11px;stroke-width:2}
+
+  /* Pill (privacy status) */
+  .pills{display:flex;flex-wrap:wrap;gap:4px}
+  .pill{padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:500;background:#1A1A1E;color:#A0A0A8;border:1px solid #26262B;display:inline-flex;align-items:center;gap:4px}
+  .pill svg{width:9px;height:9px;stroke-width:2.5;color:var(--c2,var(--c))}
+
+  /* Checkbox */
+  .check-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;color:#fff}
+  .check{width:14px;height:14px;border:1.5px solid #34343A;border-radius:3px;display:flex;align-items:center;justify-content:center;background:#0F0F11;flex:none}
+  .check.on{background:var(--c);border-color:var(--c);color:#0F0F11}
+  .check.on svg{opacity:1}
+  .check svg{width:9px;height:9px;stroke-width:3;opacity:0}
+
+  /* Bars */
+  .bars{display:flex;align-items:flex-end;gap:1.5px;height:40px}
+  .bar{flex:1;background:#1F1F23;border-radius:1px}
+  .bar.on{background:var(--c)}
+  .bar.peak{background:var(--c);box-shadow:0 -1px 4px var(--c)}
+
+  /* Stat number */
+  .stat{display:flex;flex-direction:column;gap:2px}
+  .stat .v{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-0.02em;color:#fff;line-height:1}
+  .stat .v .u{font-size:11px;color:#6B6B75;margin-left:2px}
+  .stat .l{font-size:10px;color:#6B6B75;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;font-family:'JetBrains Mono',monospace}
+
+  /* Live dot */
+  .live{display:inline-flex;align-items:center;gap:5px;padding:2px 7px;background:#1A1A1E;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;color:#A0A0A8}
+  .live .dot{width:5px;height:5px;border-radius:50%;background:var(--c);box-shadow:0 0 4px var(--c)}
+
+  /* Hero mini */
+  .hero-mini{background:linear-gradient(135deg,#16161A 0%,#1A1A1E 100%);border:1px solid #1F1F23;border-radius:8px;padding:12px 14px;position:relative;overflow:hidden}
+  .hero-mini::before{content:"";position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,var(--c),transparent)}
+  .hero-mini h3{font-size:14px;font-weight:600;letter-spacing:-0.01em;margin:0 0 4px}
+  .hero-mini p{margin:0;font-size:11px;color:#A0A0A8;line-height:1.4}
+
+  /* Tag */
+  .tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10.5px;font-weight:600;background:rgba(var(--rgb),.14);color:var(--c)}
+  .tag.green{color:var(--c2,var(--c))}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div class="crumb">// color_comparison</div>
+  <h1>同一个设计，4 种主色实测</h1>
+  <p class="sub">基于方向 1 · Linear 极简克制的版式，把主色 accent 替换成 4 个候选。看你对哪个色彩语言最有感觉。</p>
+  <div class="hint">
+    <span class="b">EMERALD · 保留现状</span>
+    <span class="b">ELECTRIC BLUE · 工具感</span>
+    <span class="b">AMBER · 暖技术</span>
+    <span class="b">MONO + ACCENT · 极简</span>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- EMERALD -->
+  <div class="col" style="--c:#16A34A;--c2:#22C55E;--rgb:34,197,94">
+    <div class="col-h">
+      <div class="l">
+        <div class="sw" style="background:linear-gradient(135deg,#16A34A,#22C55E)"></div>
+        <div>
+          <div class="lbl">Emerald 翡翠绿</div>
+        </div>
+      </div>
+      <div class="hex">#16A34A</div>
+    </div>
+    <div class="col-body">
+
+      <div class="demo">
+        <div class="ttl">Active Nav</div>
+        <div class="nv"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>今日工作</div>
+        <div class="nv on"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path></svg>生成报告</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Buttons</div>
+        <div class="btns">
+          <span class="btn solid dark">主要操作</span>
+          <span class="btn outline">次要</span>
+          <span class="btn ghost">幽灵</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Hero accent bar</div>
+        <div class="hero-mini">
+          <h3>你只管工作，日报交给我</h3>
+          <p>静默记录工作轨迹，AI 帮你写好每一份日报。</p>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Trust pills</div>
+        <div class="pills">
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销毁</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Plan list</div>
+        <div class="check-row"><div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>整理日报助手需求文档 V2.1</div>
+        <div class="check-row"><div class="check"></div>完成模板编辑器交互</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Tag</div>
+        <span class="tag">开发</span>
+        <span class="tag" style="margin-left:4px">沟通</span>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Stat number</div>
+        <div class="stat"><div class="v">4.2<span class="u">h</span></div><div class="l">focused today</div></div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Bars</div>
+        <div class="bars">
+          <div class="bar" style="height:30%"></div>
+          <div class="bar on" style="height:75%"></div>
+          <div class="bar on peak" style="height:100%"></div>
+          <div class="bar on" style="height:65%"></div>
+          <div class="bar" style="height:20%"></div>
+          <div class="bar" style="height:10%"></div>
+          <div class="bar" style="height:10%"></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Live status</div>
+        <span class="live"><span class="dot"></span>rec · recording</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ELECTRIC BLUE -->
+  <div class="col" style="--c:#5E6AD2;--c2:#7B85E5;--rgb:94,106,210">
+    <div class="col-h">
+      <div class="l">
+        <div class="sw" style="background:linear-gradient(135deg,#5E6AD2,#7B85E5)"></div>
+        <div>
+          <div class="lbl">Electric Blue 冷蓝</div>
+        </div>
+      </div>
+      <div class="hex">#5E6AD2</div>
+    </div>
+    <div class="col-body">
+
+      <div class="demo">
+        <div class="ttl">Active Nav</div>
+        <div class="nv"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>今日工作</div>
+        <div class="nv on"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path></svg>生成报告</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Buttons</div>
+        <div class="btns">
+          <span class="btn solid">主要操作</span>
+          <span class="btn outline">次要</span>
+          <span class="btn ghost">幽灵</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Hero accent bar</div>
+        <div class="hero-mini">
+          <h3>你只管工作，日报交给我</h3>
+          <p>静默记录工作轨迹，AI 帮你写好每一份日报。</p>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Trust pills</div>
+        <div class="pills">
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销毁</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Plan list</div>
+        <div class="check-row"><div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>整理日报助手需求文档 V2.1</div>
+        <div class="check-row"><div class="check"></div>完成模板编辑器交互</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Tag</div>
+        <span class="tag">开发</span>
+        <span class="tag" style="margin-left:4px">沟通</span>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Stat number</div>
+        <div class="stat"><div class="v">4.2<span class="u">h</span></div><div class="l">focused today</div></div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Bars</div>
+        <div class="bars">
+          <div class="bar" style="height:30%"></div>
+          <div class="bar on" style="height:75%"></div>
+          <div class="bar on peak" style="height:100%"></div>
+          <div class="bar on" style="height:65%"></div>
+          <div class="bar" style="height:20%"></div>
+          <div class="bar" style="height:10%"></div>
+          <div class="bar" style="height:10%"></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Live status</div>
+        <span class="live"><span class="dot"></span>rec · recording</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- AMBER -->
+  <div class="col" style="--c:#C95A3A;--c2:#E07A50;--rgb:201,90,58">
+    <div class="col-h">
+      <div class="l">
+        <div class="sw" style="background:linear-gradient(135deg,#C95A3A,#E07A50)"></div>
+        <div>
+          <div class="lbl">Amber 暖琥珀</div>
+        </div>
+      </div>
+      <div class="hex">#C95A3A</div>
+    </div>
+    <div class="col-body">
+
+      <div class="demo">
+        <div class="ttl">Active Nav</div>
+        <div class="nv"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>今日工作</div>
+        <div class="nv on"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path></svg>生成报告</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Buttons</div>
+        <div class="btns">
+          <span class="btn solid">主要操作</span>
+          <span class="btn outline">次要</span>
+          <span class="btn ghost">幽灵</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Hero accent bar</div>
+        <div class="hero-mini">
+          <h3>你只管工作，日报交给我</h3>
+          <p>静默记录工作轨迹，AI 帮你写好每一份日报。</p>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Trust pills</div>
+        <div class="pills">
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销毁</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Plan list</div>
+        <div class="check-row"><div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>整理日报助手需求文档 V2.1</div>
+        <div class="check-row"><div class="check"></div>完成模板编辑器交互</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Tag</div>
+        <span class="tag">开发</span>
+        <span class="tag" style="margin-left:4px">沟通</span>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Stat number</div>
+        <div class="stat"><div class="v">4.2<span class="u">h</span></div><div class="l">focused today</div></div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Bars</div>
+        <div class="bars">
+          <div class="bar" style="height:30%"></div>
+          <div class="bar on" style="height:75%"></div>
+          <div class="bar on peak" style="height:100%"></div>
+          <div class="bar on" style="height:65%"></div>
+          <div class="bar" style="height:20%"></div>
+          <div class="bar" style="height:10%"></div>
+          <div class="bar" style="height:10%"></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Live status</div>
+        <span class="live"><span class="dot"></span>rec · recording</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MONO + ACCENT -->
+  <div class="col" style="--c:#F76B6B;--c2:#FF8A8A;--rgb:247,107,107">
+    <div class="col-h">
+      <div class="l">
+        <div class="sw" style="background:#fff"></div>
+        <div>
+          <div class="lbl">Mono + Accent 极简</div>
+        </div>
+      </div>
+      <div class="hex">FG #fff · #F76B6B</div>
+    </div>
+    <div class="col-body">
+
+      <div class="demo">
+        <div class="ttl">Active Nav</div>
+        <div class="nv"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>今日工作</div>
+        <div class="nv on"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path></svg>生成报告</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Buttons (mono only)</div>
+        <div class="btns">
+          <span class="btn solid dark" style="background:#fff;color:#0F0F11">主要操作</span>
+          <span class="btn outline">次要</span>
+          <span class="btn ghost">幽灵</span>
+        </div>
+        <div style="margin-top:6px;font-size:10px;color:#6B6B75;font-family:'JetBrains Mono',monospace">↑ accent 红只用于语义状态</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Hero accent bar</div>
+        <div class="hero-mini" style="border-color:#fff">
+          <h3>你只管工作，日报交给我</h3>
+          <p>静默记录工作轨迹，AI 帮你写好每一份日报。</p>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Trust pills (mono)</div>
+        <div class="pills">
+          <span class="pill" style="--c2:#A0A0A8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="color:#A0A0A8"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销毁</span>
+          <span class="pill" style="--c2:#A0A0A8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="color:#A0A0A8"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Plan list (mono check)</div>
+        <div class="check-row"><div class="check on" style="background:#fff;border-color:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>整理日报助手需求文档 V2.1</div>
+        <div class="check-row"><div class="check"></div>完成模板编辑器交互</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Tag (mono)</div>
+        <span class="tag" style="background:#26262B;color:#A0A0A8">开发</span>
+        <span class="tag" style="margin-left:4px;background:#26262B;color:#A0A0A8">沟通</span>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Stat number</div>
+        <div class="stat"><div class="v">4.2<span class="u">h</span></div><div class="l">focused today</div></div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Bars (mono)</div>
+        <div class="bars">
+          <div class="bar" style="height:30%"></div>
+          <div class="bar" style="height:75%;background:#fff"></div>
+          <div class="bar" style="height:100%;background:#fff;box-shadow:0 -1px 4px rgba(255,255,255,.4)"></div>
+          <div class="bar" style="height:65%;background:#fff"></div>
+          <div class="bar" style="height:20%"></div>
+          <div class="bar" style="height:10%"></div>
+          <div class="bar" style="height:10%"></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">Live status (red = only color)</div>
+        <span class="live"><span class="dot"></span>rec · recording</span>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div style="max-width:1480px;margin:0 auto;padding:0 32px 80px">
+  <div style="background:#16161A;border:1px solid #1F1F23;border-radius:12px;padding:24px 28px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px">
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6B75;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">Emerald</div>
+      <div style="font-size:12px;color:#A0A0A8;line-height:1.5">延续现状。和"健康/植物"暗合，识别度高，是当下产品已有的语言。</div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6B75;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">Electric Blue</div>
+      <div style="font-size:12px;color:#A0A0A8;line-height:1.5">工具感最强，和 Linear / Vercel / Notion AI 同一族。专业、克制，不抢戏。</div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6B75;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">Amber</div>
+      <div style="font-size:12px;color:#A0A0A8;line-height:1.5">从工具感转向人味，更亲和。但需要配套暖背景才出彩，否则突兀。</div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6B75;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">Mono + Accent</div>
+      <div style="font-size:12px;color:#A0A0A8;line-height:1.5">最高级也最克制。红色仅用于"实时/录制/警告"等真实语义状态。</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

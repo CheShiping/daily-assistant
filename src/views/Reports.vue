@@ -303,7 +303,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="p-6 max-w-7xl mx-auto">
+  <div class="p-6 px-7 max-w-[1320px] mx-auto w-full h-full overflow-y-auto min-h-0">
     <!-- 错误提示 -->
     <div v-if="errorMessage" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground px-4 py-2 rounded-md shadow-lg text-sm flex items-center gap-2 transition-all">
       <span>{{ errorMessage }}</span>
@@ -366,142 +366,247 @@ onUnmounted(() => {
       <div v-else class="card p-6 markdown-body" v-html="renderedContent"></div>
     </template>
 
-    <!-- 列表视图 -->
+    <!-- 列表视图 · 两栏：左侧配置 sticky，右侧历史报告铺满 -->
     <template v-else>
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold">报告</h1>
+        <div>
+          <h1 class="font-display text-[26px] font-bold tracking-tight">报告</h1>
+          <p class="text-xs text-muted-foreground mt-1">配置左侧参数后点击生成，AI 自动撰写报告</p>
+        </div>
         <button class="btn-primary" @click="openGenerate" :disabled="generating">
           <Sparkles v-if="!generating" class="w-4 h-4" />
           <Loader2 v-else class="w-4 h-4 animate-spin" />
-          {{ generating ? '生成中...' : '生成报告' }}
+          {{ generating ? '生成中...' : '快速生成报告' }}
         </button>
       </div>
 
-      <!-- 内联报告配置区 -->
-      <div class="card p-5 mb-6 space-y-4">
-        <div>
-          <h3 class="text-base font-semibold mb-1">报告配置</h3>
-          <p class="text-xs text-muted-foreground">配置参数后点击生成，AI 将基于工作记录自动撰写报告</p>
-        </div>
-        <div>
-          <label class="label mb-1 block">报告类型</label>
-          <div class="flex gap-2">
-            <button
-              v-for="t in (['daily','weekly','monthly'] as const)"
-              :key="t"
-              :class="['btn flex-1', form.type === t ? 'btn-primary' : 'btn-outline']"
-              @click="form.type = t; onFormChange()"
-            >{{ typeLabels[t] }}</button>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="label mb-1 block">开始日期</label>
-            <input type="date" v-model="form.startDate" @change="onFormChange" class="input" />
-          </div>
-          <div>
-            <label class="label mb-1 block">结束日期</label>
-            <input type="date" v-model="form.endDate" @change="onFormChange" class="input" />
-          </div>
-        </div>
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <label class="label">报告模板</label>
-            <button
-              v-if="form.templateId"
-              class="text-xs text-muted-foreground hover:text-foreground"
-              @click="form.templateId = ''"
-            >不使用模板</button>
-          </div>
-          <p class="text-xs text-muted-foreground mb-2">选择报告输出格式，作为 AI 生成的基准参考。标"推荐"的模板根据你的工作内容智能匹配。</p>
-          <div class="grid grid-cols-3 gap-2 max-h-56 overflow-auto pr-1">
-            <button
-              v-for="tpl in filteredTemplates"
-              :key="tpl.id"
-              type="button"
-              class="p-3 rounded-lg border text-left transition-colors"
-              :class="form.templateId === tpl.id
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-primary/50'"
-              @click="form.templateId = tpl.id"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-sm font-medium truncate">{{ tpl.name }}</span>
-                <span v-if="recommendedTemplateId === tpl.id" class="text-xs text-primary flex items-center gap-0.5 flex-shrink-0">
-                  <Sparkles class="w-3 h-3" />推荐
-                </span>
+      <div class="grid grid-cols-12 gap-5">
+        <!-- 左侧 · 配置 sticky -->
+        <div class="col-span-12 lg:col-span-5 xl:col-span-4">
+          <div class="card p-5 space-y-4 lg:sticky lg:top-0">
+            <div>
+              <h3 class="font-display text-[15px] font-semibold mb-1">报告配置</h3>
+              <p class="text-xs text-muted-foreground">参数会同步到右侧历史记录</p>
+            </div>
+            <div>
+              <label class="label mb-1.5 block text-muted-foreground text-[11.5px] font-mono uppercase tracking-wider">报告类型</label>
+              <q-btn-toggle
+                v-model="form.type"
+                spread
+                no-caps
+                unelevated
+                toggle-color="primary"
+                color="white"
+                text-color="foreground"
+                class="report-type-toggle full-width"
+                :options="[
+                  { label: '日报', value: 'daily' },
+                  { label: '周报', value: 'weekly' },
+                  { label: '月报', value: 'monthly' }
+                ]"
+                @update:model-value="onFormChange"
+              />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="label mb-1.5 block text-muted-foreground text-[11.5px] font-mono uppercase tracking-wider">开始日期</label>
+                <q-input v-model="form.startDate" outlined dense mask="####-##-##" :rules="['date']" class="date-input">
+                  <template v-slot:append>
+                    <q-icon name="event" class="cursor-pointer">
+                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                        <q-date v-model="form.startDate" mask="YYYY-MM-DD" minimal @update:model-value="onFormChange" />
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
               </div>
-              <p class="text-xs text-muted-foreground mt-1">{{ clusteringDesc(tpl.clustering) }}</p>
-              <span class="text-[10px] text-muted-foreground mt-1 inline-block">
-                {{ tpl.isBuiltin ? '内置' : '自定义' }}
-              </span>
-            </button>
-            <button
-              v-if="filteredTemplates.length === 0"
-              type="button"
-              class="p-3 rounded-lg border border-dashed border-border text-xs text-muted-foreground col-span-3 text-center"
-            >该类型暂无模板</button>
-          </div>
-        </div>
-        <div>
-          <label class="label mb-1 block">自定义指令（可选）</label>
-          <textarea v-model="form.customInstruction" class="textarea" rows="2" placeholder="例如：突出数据成果，简洁风格"></textarea>
-        </div>
-        <label class="flex items-center gap-2 text-sm cursor-pointer">
-          <input type="checkbox" v-model="form.useMemory" />
-          使用个人工作记忆
-        </label>
-        <div class="flex justify-end pt-1">
-          <button class="btn-primary" @click="generate" :disabled="generating">
-            <Sparkles v-if="!generating" class="w-4 h-4" />
-            <Loader2 v-else class="w-4 h-4 animate-spin" />
-            {{ generating ? '正在生成...' : '开始生成报告' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 流式生成中 -->
-      <div v-if="generating" class="card p-6 mb-6">
-        <div class="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-          <Loader2 class="w-4 h-4 animate-spin" />
-          正在生成 {{ typeLabels[form.type] }}...
-        </div>
-        <div class="markdown-body text-sm" v-html="marked.parse(streamingContent || '等待响应...')"></div>
-      </div>
-
-      <!-- 列表 -->
-      <div v-if="loading" class="flex items-center gap-2 text-muted-foreground">
-        <Loader2 class="w-4 h-4 animate-spin" /> 加载中...
-      </div>
-
-      <div v-else-if="reports.length === 0" class="card p-12 text-center text-muted-foreground">
-        <FileText class="w-10 h-10 mx-auto mb-3 opacity-40" />
-        <p>还没有生成过报告</p>
-        <p class="text-xs mt-1">配置上方参数后点击"开始生成报告"</p>
-      </div>
-
-      <div v-else class="space-y-2">
-        <div
-          v-for="r in reports"
-          :key="r.id"
-          class="card p-4 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow"
-          @click="viewReport(r)"
-        >
-          <div class="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <FileText class="w-5 h-5 text-primary" />
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="font-medium truncate">{{ r.title }}</div>
-            <div class="text-xs text-muted-foreground mt-0.5">
-              {{ typeLabels[r.type] }} · {{ r.startDate }} 至 {{ r.endDate }} · {{ relativeTime(r.createdAt) }}
+              <div>
+                <label class="label mb-1.5 block text-muted-foreground text-[11.5px] font-mono uppercase tracking-wider">结束日期</label>
+                <q-input v-model="form.endDate" outlined dense mask="####-##-##" :rules="['date']" class="date-input">
+                  <template v-slot:append>
+                    <q-icon name="event" class="cursor-pointer">
+                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                        <q-date v-model="form.endDate" mask="YYYY-MM-DD" minimal @update:model-value="onFormChange" />
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="label text-muted-foreground text-[11.5px] font-mono uppercase tracking-wider">报告模板</label>
+                <button
+                  v-if="form.templateId"
+                  class="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  @click="form.templateId = ''"
+                >不使用模板</button>
+              </div>
+              <p class="text-xs text-muted-foreground mb-2">选择输出格式作为 AI 生成的基准参考</p>
+              <div class="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                <button
+                  v-for="tpl in filteredTemplates"
+                  :key="tpl.id"
+                  type="button"
+                  class="p-3 rounded-[10px] border text-left transition-all duration-200"
+                  :class="form.templateId === tpl.id
+                    ? 'border-primary'
+                    : 'border-border hover:border-primary/50 hover:bg-muted/40'"
+                  :style="form.templateId === tpl.id ? { background: 'hsl(27 92% 63% / 0.08)' } : {}"
+                  @click="form.templateId = tpl.id"
+                >
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-sm font-medium truncate">{{ tpl.name }}</span>
+                    <span v-if="recommendedTemplateId === tpl.id" class="text-[10.5px] flex items-center gap-0.5 flex-shrink-0" style="color: hsl(27 92% 50%)">
+                      <Sparkles class="w-3 h-3" />推荐
+                    </span>
+                  </div>
+                  <p class="text-xs text-muted-foreground mt-1">{{ clusteringDesc(tpl.clustering) }}</p>
+                  <span class="text-[10px] text-muted-foreground mt-1 inline-block font-mono">
+                    {{ tpl.isBuiltin ? '内置' : '自定义' }}
+                  </span>
+                </button>
+                <button
+                  v-if="filteredTemplates.length === 0"
+                  type="button"
+                  class="p-3 rounded-[10px] border border-dashed border-border text-xs text-muted-foreground col-span-2 text-center"
+                >该类型暂无模板</button>
+              </div>
+            </div>
+            <div>
+              <label class="label mb-1.5 block text-muted-foreground text-[11.5px] font-mono uppercase tracking-wider">自定义指令（可选）</label>
+              <textarea v-model="form.customInstruction" class="textarea" rows="3" placeholder="例如：突出数据成果，简洁风格"></textarea>
+            </div>
+            <label class="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input type="checkbox" v-model="form.useMemory" class="size-4 accent-primary cursor-pointer" />
+              <span>使用个人工作记忆</span>
+            </label>
+            <div class="flex justify-end pt-1">
+              <button class="btn-primary btn-lg" @click="generate" :disabled="generating">
+                <Sparkles v-if="!generating" class="w-4 h-4" />
+                <Loader2 v-else class="w-4 h-4 animate-spin" />
+                {{ generating ? '正在生成…' : '开始生成报告' }}
+              </button>
             </div>
           </div>
-          <span v-if="r.status === 'generating'" class="text-xs text-amber-600">生成中</span>
-          <span v-else-if="r.status === 'failed'" class="text-xs text-destructive">失败</span>
-          <button class="btn-ghost btn-icon btn-sm" @click.stop="exportReport(r)"><Download class="w-3.5 h-3.5" /></button>
-          <button class="btn-ghost btn-icon btn-sm hover:text-destructive" @click.stop="deleteReport(r.id)"><Trash2 class="w-3.5 h-3.5" /></button>
+        </div>
+
+        <!-- 右侧 · 历史报告列表 -->
+        <div class="col-span-12 lg:col-span-7 xl:col-span-8 space-y-3">
+          <div class="flex items-center gap-2.5 mb-1">
+            <h2 class="font-display text-[15px] font-semibold tracking-tight">历史报告</h2>
+            <span class="chip chip-neutral">{{ reports.length }}</span>
+          </div>
+
+          <!-- 流式生成中 -->
+          <div v-if="generating" class="card p-5">
+            <div class="flex items-center gap-2 text-sm mb-3" style="color: hsl(27 92% 50%)">
+              <Loader2 class="w-4 h-4 animate-spin" />
+              <span class="font-semibold">正在生成 {{ typeLabels[form.type] }}…</span>
+              <span class="ml-auto chip chip-cool">实时</span>
+            </div>
+            <div class="markdown-body text-sm" v-html="marked.parse(streamingContent || '等待响应...')"></div>
+          </div>
+
+          <div v-if="loading" class="flex items-center gap-2 text-muted-foreground py-6 justify-center">
+            <Loader2 class="w-4 h-4 animate-spin" /> 加载中...
+          </div>
+
+          <div v-else-if="reports.length === 0" class="card p-12 text-center text-muted-foreground">
+            <div class="w-14 h-14 rounded-[14px] mx-auto mb-3 flex items-center justify-center"
+                 style="background: linear-gradient(135deg, hsl(165 21% 92%), hsl(27 92% 95%));">
+              <FileText class="w-6 h-6 text-primary" />
+            </div>
+            <div class="font-display text-[15px] font-semibold mb-1 text-foreground">还没有生成过报告</div>
+            <p class="text-xs">配置左侧参数后点击"开始生成报告"</p>
+          </div>
+
+          <div v-else class="space-y-2">
+            <div
+              v-for="r in reports"
+              :key="r.id"
+              class="card card-hover p-4 flex items-center gap-4 cursor-pointer"
+              @click="viewReport(r)"
+            >
+              <div class="w-11 h-11 rounded-[10px] flex items-center justify-center flex-shrink-0"
+                   style="background: linear-gradient(135deg, hsl(27 92% 95%), hsl(165 21% 92%)); color: hsl(27 92% 50%);">
+                <FileText class="w-5 h-5" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-medium truncate text-foreground">{{ r.title }}</div>
+                <div class="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+                  <span class="chip chip-neutral !text-[10px] !py-0 !px-1.5">{{ typeLabels[r.type] }}</span>
+                  <span class="font-mono">{{ r.startDate }} 至 {{ r.endDate }}</span>
+                  <span>·</span>
+                  <span>{{ relativeTime(r.createdAt) }}</span>
+                </div>
+              </div>
+              <span v-if="r.status === 'generating'" class="chip chip-warn">生成中</span>
+              <span v-else-if="r.status === 'failed'" class="chip" style="background: hsl(16 65% 95%); color: hsl(16 65% 35%)">失败</span>
+              <button class="btn-ghost btn-icon btn-sm" @click.stop="exportReport(r)" title="导出"><Download class="w-3.5 h-3.5" /></button>
+              <button class="btn-ghost btn-icon btn-sm hover:!text-destructive" @click.stop="deleteReport(r.id)" title="删除"><Trash2 class="w-3.5 h-3.5" /></button>
+            </div>
+          </div>
         </div>
       </div>
     </template>
   </div>
 </template>
+
+<style scoped>
+/* Quasar 控件皮肤统一到 design token */
+.report-type-toggle :deep(.q-btn) {
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.report-type-toggle :deep(.q-btn--unelevated) {
+  background: hsl(var(--background));
+  color: hsl(var(--muted-foreground));
+  border: 1px solid hsl(var(--border));
+  transition: all .2s ease;
+}
+.report-type-toggle :deep(.q-btn--unelevated:hover) {
+  background: hsl(var(--accent));
+  border-color: hsl(var(--muted-foreground) / 0.3);
+}
+.report-type-toggle :deep(.q-btn-item) {
+  margin: 0 2px;
+}
+
+.date-input :deep(.q-field__control) {
+  border-radius: 10px;
+  background: hsl(var(--background));
+  min-height: 36px;
+}
+.date-input :deep(.q-field__control):hover {
+  border-color: hsl(var(--muted-foreground) / 0.3);
+}
+.date-input :deep(.q-field--focused .q-field__control) {
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.14);
+  border-color: hsl(var(--primary));
+}
+.date-input :deep(.q-field__native),
+.date-input :deep(.q-field__input) {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+
+/* Quasar 弹窗 / 日历 与主题一致 */
+:deep(.q-date) {
+  border-radius: 14px;
+  font-family: inherit;
+}
+:deep(.q-date__header) {
+  background: linear-gradient(135deg, hsl(27 92% 95%), hsl(165 21% 92%));
+}
+:deep(.q-date__today) {
+  color: hsl(27 92% 50%);
+  font-weight: 700;
+}
+:deep(.q-date__event) {
+  background: hsl(27 92% 63% / 0.2);
+  color: hsl(27 92% 50%);
+}
+</style>

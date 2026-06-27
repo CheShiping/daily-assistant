@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Check, BarChart3, Clock, Monitor, Play, Square,
-  Plus, Trash2, GripVertical, Loader2
+  Plus, Trash2, GripVertical, Loader2, Sparkles, Shield
 } from 'lucide-vue-next'
 import { today, formatDate } from '@/lib/utils'
 import type { WorkRecord, PlanItem, AppSettings } from '@/types'
@@ -12,7 +12,7 @@ const router = useRouter()
 
 // 数据
 const loading = ref(true)
-const records = ref<WorkRecord[]>([]) // 今日
+const records = ref<WorkRecord[]>([])
 const yesterdayRecords = ref<WorkRecord[]>([])
 const dayBeforeRecords = ref<WorkRecord[]>([])
 const displays = ref<Array<{ id: number; label: string; x: number; y: number; width: number; height: number; scaleFactor: number; isPrimary: boolean }>>([])
@@ -35,11 +35,13 @@ const dayBeforeStr = formatDate(new Date(Date.now() - 2 * 86400000))
 // 隐私状态 Pill
 const privacyPills = computed(() => {
   if (!settings.value) return []
-  const pills: string[] = []
-  if (settings.value.autoDeleteScreenshots) pills.push('截图分析后即销毁 ✓')
-  else pills.push('截图保留中')
-  pills.push('数据仅存本地 ✓')
-  if (settings.value.sensitiveSceneSkip) pills.push('内容脱敏处理 ✓')
+  const pills: Array<{ label: string; cool?: boolean }> = []
+  pills.push({
+    label: settings.value.autoDeleteScreenshots ? '截图分析后即销毁' : '截图保留中',
+    cool: settings.value.autoDeleteScreenshots
+  })
+  pills.push({ label: '数据仅存本地' })
+  if (settings.value.sensitiveSceneSkip) pills.push({ label: '内容脱敏处理', cool: true })
   return pills
 })
 
@@ -51,7 +53,7 @@ const focusHours = computed(() => {
       const dur = new Date(r.endedAt).getTime() - new Date(r.startedAt).getTime()
       if (dur > 0) ms += dur
     } else {
-      ms += 5 * 60000 // 无结束时间默认 5 分钟
+      ms += 5 * 60000
     }
   }
   return (ms / 3600000).toFixed(1)
@@ -71,7 +73,34 @@ const topCategory = computed(() => {
   return best
 })
 
-// 最近 5 条记录
+// 数字 count-up
+function animateNumber(el: HTMLElement | null, target: number, decimals = 0, duration = 900) {
+  if (!el) return
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (reduce) { el.textContent = target.toFixed(decimals); return }
+  const start = performance.now()
+  const node = el
+  function step(now: number) {
+    const p = Math.min((now - start) / duration, 1)
+    const eased = 1 - Math.pow(1 - p, 3)
+    node.textContent = (target * eased).toFixed(decimals)
+    if (p < 1) requestAnimationFrame(step)
+    else node.textContent = target.toFixed(decimals)
+  }
+  requestAnimationFrame(step)
+}
+
+const recordsCountEl = ref<HTMLElement | null>(null)
+const focusHoursEl = ref<HTMLElement | null>(null)
+
+// 触发数字 count-up（数据加载完）
+watch([records], () => {
+  setTimeout(() => {
+    animateNumber(recordsCountEl.value, records.value.length, 0)
+    animateNumber(focusHoursEl.value, parseFloat(focusHours.value), 1)
+  }, 100)
+})
+
 const recentRecords = computed(() => records.value.slice(0, 5))
 
 function formatRecordTime(iso: string): string {
@@ -100,19 +129,20 @@ const maxCount = computed(() => {
 })
 
 function barHeight(count: number): number {
-  if (count === 0) return 8
-  if (maxCount.value === 0) return 8
+  if (count === 0) return 6
+  if (maxCount.value === 0) return 6
   return Math.max(15, (count / maxCount.value) * 100)
 }
 
+// 柑橘色阶 0.2/0.4/0.6/0.8/1
 function barColor(count: number): string {
-  if (count === 0) return 'rgba(0,0,0,0.05)'
+  if (count === 0) return 'hsl(var(--border))'
   const ratio = maxCount.value === 0 ? 0 : count / maxCount.value
-  if (ratio < 0.2) return 'hsl(var(--primary) / 0.2)'
-  if (ratio < 0.4) return 'hsl(var(--primary) / 0.4)'
-  if (ratio < 0.6) return 'hsl(var(--primary) / 0.6)'
-  if (ratio < 0.8) return 'hsl(var(--primary) / 0.8)'
-  return 'hsl(var(--primary))'
+  if (ratio < 0.2) return 'hsl(27 92% 63% / 0.22)'
+  if (ratio < 0.4) return 'hsl(27 92% 63% / 0.42)'
+  if (ratio < 0.6) return 'hsl(27 92% 63% / 0.65)'
+  if (ratio < 0.8) return 'hsl(27 92% 63% / 0.85)'
+  return 'hsl(27 92% 55%)'
 }
 
 async function load() {
@@ -205,81 +235,136 @@ async function onDrop(e: DragEvent, target: PlanItem) {
   if (sourceIdx < 0 || targetIdx < 0) return
   const sourceOrder = plans.value[sourceIdx].order
   const targetOrder = plans.value[targetIdx].order
-  // 交换 order
   await window.api.plans.update({ id: sourceId, order: targetOrder })
   await window.api.plans.update({ id: target.id, order: sourceOrder })
   await reloadPlans()
 }
+
+const planProgress = computed(() => {
+  if (plans.value.length === 0) return 0
+  return Math.round((plans.value.filter(p => p.completed).length / plans.value.length) * 100)
+})
 
 onMounted(load)
 onUnmounted(() => {})
 </script>
 
 <template>
-  <div class="flex flex-col gap-5 p-6 px-7">
-    <!-- API Key 未配置提示 -->
-    <div v-if="settings && !settings.apiKey" class="rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
-      ⚠️ 尚未配置 API Key，请前往
-      <button class="underline font-medium" @click="router.push('/settings')">设置</button>
-      配置后才能使用截图识别和报告生成功能。
+  <div class="flex flex-col gap-5 p-6 px-7 max-w-[1280px] mx-auto w-full h-full overflow-y-auto min-h-0">
+
+    <!-- 0. API Key 提示 -->
+    <div v-if="settings && !settings.apiKey"
+         class="rounded-[14px] border p-3.5 text-sm flex items-start gap-3 reveal"
+         style="background: hsl(36 60% 95%); border-color: hsl(36 60% 85%); color: hsl(28 50% 28%);">
+      <Sparkles class="w-4 h-4 flex-shrink-0 mt-0.5" />
+      <div class="flex-1">
+        尚未配置 API Key，请前往
+        <button class="underline font-semibold" @click="router.push('/settings')">设置</button>
+        配置后才能使用截图识别和报告生成功能。
+      </div>
     </div>
 
-    <!-- 1. Hero 区 -->
-    <div class="rounded-[10px] bg-gradient-to-br from-primary/5 to-transparent p-5 px-[18px] flex items-center gap-4">
-      <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-        <Check class="w-6 h-6" />
+    <!-- 1. Hero · 暖渐变 + 大字 + 隐私 chip + REC 状态 -->
+    <div class="relative rounded-[18px] overflow-hidden reveal"
+         style="background: linear-gradient(135deg, hsl(27 92% 95%) 0%, hsl(36 38% 96%) 45%, hsl(165 21% 92%) 100%);">
+      <!-- 装饰光斑 -->
+      <div class="absolute -top-12 -right-12 w-64 h-64 rounded-full pointer-events-none"
+           style="background: radial-gradient(circle, hsl(27 92% 63% / 0.18), transparent 60%);"></div>
+      <div class="absolute -bottom-16 left-1/3 w-56 h-56 rounded-full pointer-events-none"
+           style="background: radial-gradient(circle, hsl(165 21% 57% / 0.15), transparent 60%);"></div>
+
+      <div class="relative p-6 px-7 flex items-center gap-5">
+        <!-- 品牌 mark -->
+        <div class="w-14 h-14 rounded-[14px] flex items-center justify-center flex-shrink-0"
+             style="background: linear-gradient(135deg, hsl(27 92% 65%), hsl(27 92% 55%)); box-shadow: 0 8px 22px hsl(27 92% 63% / 0.32), inset 0 1px 0 rgba(255,255,255,0.4);">
+          <Check class="w-7 h-7 text-white" :stroke-width="2.5" />
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <div class="font-mono text-[11px] tracking-[0.1em] uppercase text-primary/80 font-semibold">
+            牙牙乐日报 · {{ formatDate(new Date()) }}
+          </div>
+          <h1 class="font-display text-[28px] font-bold leading-[1.1] mt-1.5 text-foreground tracking-tight">
+            你只管<span class="text-primary italic">工作</span>，日报交给我
+          </h1>
+          <p class="text-[13px] text-muted-foreground mt-2 max-w-[460px]">
+            静默记录工作轨迹，AI 帮你写好每一份日报、周报、月报，不再为写汇报发愁。
+          </p>
+          <div class="flex flex-wrap gap-1.5 mt-3">
+            <span
+              v-for="(p, i) in privacyPills"
+              :key="i"
+              :class="['chip', p.cool ? 'chip-cool' : '']"
+            >
+              <Check class="w-3 h-3" :stroke-width="2.5" /> {{ p.label }}
+            </span>
+          </div>
+        </div>
+
+        <!-- REC 状态切换 -->
+        <button
+          class="group relative flex items-center gap-2 text-xs px-3.5 py-2 rounded-full font-semibold flex-shrink-0 transition-all duration-300"
+          :class="screenshotRunning ? 'text-white' : 'bg-muted text-muted-foreground hover:bg-muted-foreground/10'"
+          :style="screenshotRunning
+            ? { background: 'linear-gradient(135deg, hsl(16 65% 60%), hsl(16 65% 50%))', boxShadow: '0 6px 18px hsl(16 65% 56% / 0.3), inset 0 1px 0 rgba(255,255,255,0.3)' }
+            : { transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }"
+          @click="toggleScreenshot"
+        >
+          <Square v-if="screenshotRunning" class="w-3 h-3" :stroke-width="2.5" />
+          <Play v-else class="w-3 h-3" :stroke-width="2.5" />
+          <span>{{ screenshotRunning ? '记录中' : '已暂停' }}</span>
+          <span v-if="screenshotRunning" class="dot-rec live !ml-1" style="background: white; box-shadow: 0 0 6px rgba(255,255,255,0.6);"></span>
+        </button>
       </div>
-      <div class="flex-1 min-w-0">
-        <h2 class="text-xl font-bold">你只管工作，日报交给我</h2>
-        <p class="text-xs text-[#999] mt-1">静默记录工作轨迹，AI 帮你写好每一份日报、周报、月报。不再为写汇报发愁。</p>
-        <div class="flex flex-wrap gap-2 mt-3">
-          <span
-            v-for="pill in privacyPills"
-            :key="pill"
-            class="rounded-full bg-primary/10 text-primary text-xs px-3 py-1 flex items-center gap-1"
-          >
-            <Check class="w-3 h-3" /> {{ pill }}
-          </span>
+    </div>
+
+    <!-- 2. 今日计划 · 进度条 + stagger 入场 -->
+    <section class="card p-5 px-6 reveal reveal-1">
+      <div class="flex items-center gap-2.5 mb-4">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center"
+             style="background: hsl(27 92% 63% / 0.12); color: hsl(27 92% 50%);">
+          <Check :size="14" :stroke-width="2.5" />
+        </div>
+        <h2 class="font-display text-[15px] font-semibold tracking-tight text-foreground">今日计划</h2>
+        <span class="chip chip-neutral !font-mono">{{ plans.filter(p => p.completed).length }} / {{ plans.length }}</span>
+        <!-- 进度条 -->
+        <div v-if="plans.length > 0" class="flex-1 h-1 bg-muted rounded-full overflow-hidden max-w-[140px] ml-1">
+          <div class="h-full rounded-full transition-all duration-500"
+               :style="{
+                 width: planProgress + '%',
+                 background: 'linear-gradient(90deg, hsl(27 92% 63%), hsl(165 21% 57%))',
+                 transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
+               }"></div>
         </div>
       </div>
-      <button
-        class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full transition-colors flex-shrink-0"
-        :class="screenshotRunning ? 'bg-primary/10 text-primary' : 'bg-black/5 text-[#999]'"
-        @click="toggleScreenshot"
-      >
-        <Square v-if="screenshotRunning" class="w-3 h-3" />
-        <Play v-else class="w-3 h-3" />
-        {{ screenshotRunning ? '记录中' : '已暂停' }}
-      </button>
-    </div>
 
-    <!-- 2. 今日计划 -->
-    <section class="rounded-[10px] bg-black/[0.02] p-5 px-[18px]">
-      <div class="flex items-center gap-2 mb-4">
-        <Check :size="14" :stroke-width="1.5" class="text-[#999]" />
-        <h2 class="text-xs font-semibold text-foreground">今日计划</h2>
-        <span class="text-xs text-[#999] ml-1">{{ plans.filter(p => p.completed).length }}/{{ plans.length }} 已完成</span>
+      <div v-if="plans.length === 0" class="text-xs text-muted-foreground py-6 text-center">
+        <div class="font-display text-sm mb-1">还没有计划</div>
+        <div>添加一条开始今天的工作 →</div>
       </div>
-      <div v-if="plans.length === 0" class="text-xs text-[#999] py-2">
-        暂无计划，添加一条开始今天的工作 →
-      </div>
-      <div v-else class="space-y-1.5">
+
+      <div v-else class="space-y-1">
         <div
           v-for="plan in plans"
           :key="plan.id"
-          class="flex items-center gap-2 group py-1 px-1 rounded hover:bg-black/[0.02]"
+          class="group flex items-center gap-2.5 py-1.5 px-2 rounded-lg transition-all duration-200 hover:bg-muted/60"
+          :style="{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }"
           draggable="true"
           @dragstart="onDragStart($event, plan)"
           @dragover.prevent
           @drop="onDrop($event, plan)"
         >
-          <GripVertical class="w-3.5 h-3.5 text-[#bbb] opacity-0 group-hover:opacity-100 cursor-grab flex-shrink-0" />
-          <input
-            type="checkbox"
-            :checked="plan.completed"
-            class="rounded cursor-pointer"
-            @change="togglePlan(plan)"
-          />
+          <GripVertical class="w-3.5 h-3.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 cursor-grab flex-shrink-0 transition-opacity" />
+          <button
+            class="w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0 transition-all duration-300"
+            :class="plan.completed
+              ? 'border-primary bg-primary text-white'
+              : 'border-border bg-background group-hover:border-primary/60'"
+            :style="{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }"
+            @click="togglePlan(plan)"
+          >
+            <Check v-if="plan.completed" class="w-3 h-3" :stroke-width="3" />
+          </button>
           <template v-if="editingPlanId === plan.id">
             <input
               v-model="editingPlanText"
@@ -292,15 +377,15 @@ onUnmounted(() => {})
           </template>
           <template v-else>
             <span
-              class="flex-1 text-sm cursor-pointer"
-              :class="plan.completed ? 'line-through text-[#bbb]' : ''"
+              class="flex-1 text-[13.5px] cursor-pointer transition-colors duration-200"
+              :class="plan.completed ? 'line-through text-muted-foreground/60' : 'text-foreground'"
               @dblclick="startEditPlan(plan)"
             >
               {{ plan.text }}
             </span>
           </template>
           <button
-            class="opacity-0 group-hover:opacity-100 text-[#999] hover:text-destructive transition-opacity"
+            class="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all duration-200"
             @click="deletingPlanId = plan.id"
             title="删除计划"
           >
@@ -308,142 +393,179 @@ onUnmounted(() => {})
           </button>
         </div>
       </div>
+
       <!-- 内联确认删除条 -->
       <div
         v-if="deletingPlanId"
-        class="mt-2 flex items-center gap-2 px-2 py-1.5 rounded bg-destructive/5 border border-destructive/20 text-xs"
+        class="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg text-xs reveal"
+        style="background: hsl(16 65% 95%); border: 1px solid hsl(16 65% 85%); color: hsl(16 65% 35%);"
       >
-        <span class="text-destructive">确认删除该计划？</span>
-        <button class="btn btn-sm btn-destructive" @click="confirmDeletePlan(deletingPlanId)">确认</button>
+        <span class="font-semibold">确认删除该计划？</span>
+        <button class="btn btn-sm btn-destructive ml-auto" @click="confirmDeletePlan(deletingPlanId)">确认</button>
         <button class="btn btn-sm btn-ghost" @click="deletingPlanId = null">取消</button>
       </div>
+
       <!-- 添加计划 -->
-      <div class="flex items-center gap-2 mt-3">
-        <Plus class="w-3.5 h-3.5 text-[#999]" />
+      <div class="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+        <Plus class="w-3.5 h-3.5 text-muted-foreground" />
         <input
           v-model="newPlanText"
-          class="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-[#bbb] focus:bg-black/[0.02] rounded px-2 py-1"
+          class="flex-1 bg-transparent border-0 outline-none text-[13.5px] placeholder:text-muted-foreground/60 focus:bg-muted/40 rounded-md px-2 py-1.5 transition-colors"
           placeholder="添加计划…（Enter 提交）"
           @keyup.enter="addPlan"
         />
       </div>
     </section>
 
-    <!-- 3. 工作概览 -->
-    <section class="rounded-[10px] bg-black/[0.02] p-5 px-[18px]">
-      <div class="flex items-center gap-2 mb-4">
-        <BarChart3 :size="14" :stroke-width="1.5" class="text-[#999]" />
-        <h2 class="text-xs font-semibold text-foreground">工作概览</h2>
+    <!-- 3. 工作概览 · Bento 3 卡 + count-up -->
+    <section class="reveal reveal-2">
+      <div class="flex items-center gap-2.5 mb-3.5">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center"
+             style="background: hsl(27 92% 63% / 0.12); color: hsl(27 92% 50%);">
+          <BarChart3 :size="14" :stroke-width="2.5" />
+        </div>
+        <h2 class="font-display text-[15px] font-semibold tracking-tight">工作概览</h2>
         <button
           v-if="records.length > 5"
-          class="ml-auto text-xs text-primary hover:underline"
+          class="ml-auto text-xs text-primary hover:underline font-medium"
           @click="router.push('/timeline')"
         >查看全部 →</button>
       </div>
-      <div v-if="loading" class="flex items-center gap-2 py-4 justify-center text-xs text-[#999]">
-        <Loader2 class="w-3 h-3 animate-spin" /> 加载中...
-      </div>
-      <div v-else-if="records.length === 0" class="py-6 text-center">
-        <div class="text-3xl mb-2">🟢</div>
-        <p class="text-sm text-[#555]">今天还没有工作记录</p>
-        <p class="text-xs text-[#999] mt-1">软件已在后台自动截图记录，开始工作后稍等片刻即可看到记录</p>
-      </div>
-      <div v-else>
-        <div class="flex gap-7 mb-4">
-          <div class="flex flex-col gap-[3px]">
-            <span class="text-lg font-semibold leading-tight">{{ records.length }}</span>
-            <span class="text-xs text-[#999] leading-none">记录条数</span>
-          </div>
-          <div class="flex flex-col gap-[3px]">
-            <span class="text-lg font-semibold leading-tight">{{ focusHours }}h</span>
-            <span class="text-xs text-[#999] leading-none">专注时长</span>
-          </div>
-          <div class="flex flex-col gap-[3px]">
-            <span class="text-lg font-semibold leading-tight">{{ topCategory }}</span>
-            <span class="text-xs text-[#999] leading-none">主要工作</span>
-          </div>
+
+      <div v-if="loading" class="grid grid-cols-3 gap-3">
+        <div v-for="i in 3" :key="i" class="card p-4">
+          <div class="skel h-3 w-1/2 mb-2.5"></div>
+          <div class="skel h-7 w-3/4"></div>
         </div>
-        <!-- 最近 5 条记录 -->
-        <div class="space-y-1.5 mt-3 pt-3 border-t border-black/[0.05]">
-          <div v-for="r in recentRecords" :key="r.id" class="flex items-center gap-3 text-sm">
-            <span class="text-[#999] font-mono text-xs w-12">{{ formatRecordTime(r.startedAt) }}</span>
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-black/[0.05]">{{ r.category ?? '其他' }}</span>
-            <span class="flex-1 truncate">{{ r.summary }}</span>
+      </div>
+
+      <div v-else-if="records.length === 0" class="card p-8 text-center">
+        <div class="w-14 h-14 rounded-[14px] mx-auto mb-3 flex items-center justify-center animate-fly-in"
+             style="background: linear-gradient(135deg, hsl(165 21% 92%), hsl(27 92% 95%));">
+          <Sparkles class="w-6 h-6 text-primary" />
+        </div>
+        <div class="font-display text-[15px] font-semibold mb-1">今天还没有工作记录</div>
+        <p class="text-xs text-muted-foreground max-w-[280px] mx-auto">
+          软件已在后台自动截图记录，开始工作后稍等片刻即可看到记录
+        </p>
+      </div>
+
+      <div v-else class="grid grid-cols-3 gap-3">
+        <div class="card p-4 reveal">
+          <div class="text-[11.5px] text-muted-foreground font-mono uppercase tracking-wider">记录条数</div>
+          <div ref="recordsCountEl" class="font-display text-[34px] font-bold mt-1.5 text-foreground leading-none tabular-nums tracking-tight">0</div>
+          <div class="text-[11px] text-mint-300 mt-1.5 font-medium">+{{ recentRecords.length }} 较昨日同时段</div>
+        </div>
+        <div class="card p-4 reveal reveal-1">
+          <div class="text-[11.5px] text-muted-foreground font-mono uppercase tracking-wider">专注时长</div>
+          <div class="flex items-baseline gap-1 mt-1.5">
+            <span ref="focusHoursEl" class="font-display text-[34px] font-bold text-foreground leading-none tabular-nums tracking-tight">0.0</span>
+            <span class="font-display text-[18px] font-semibold text-muted-foreground">h</span>
+          </div>
+          <div class="text-[11px] text-primary/80 mt-1.5 font-medium">连续工作中</div>
+        </div>
+        <div class="card p-4 reveal reveal-2">
+          <div class="text-[11.5px] text-muted-foreground font-mono uppercase tracking-wider">主要工作</div>
+          <div class="font-display text-[20px] font-semibold mt-1.5 text-foreground leading-tight tracking-tight truncate">{{ topCategory }}</div>
+          <div class="text-[11px] text-muted-foreground mt-1.5">今日占比最高</div>
+        </div>
+      </div>
+
+      <!-- 最近 5 条记录 -->
+      <div v-if="records.length > 0" class="card mt-3 px-5 py-3">
+        <div class="space-y-1.5">
+          <div v-for="r in recentRecords" :key="r.id"
+               class="flex items-center gap-3 text-[13px] py-1.5 px-2 -mx-2 rounded-md hover:bg-muted/40 transition-colors duration-200">
+            <span class="text-muted-foreground font-mono text-[11px] w-12 tabular-nums">{{ formatRecordTime(r.startedAt) }}</span>
+            <span class="chip chip-neutral !text-[10.5px]">{{ r.category ?? '其他' }}</span>
+            <span class="flex-1 truncate text-foreground">{{ r.summary }}</span>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- 4. 时段记录 -->
-    <section class="rounded-[10px] bg-black/[0.02] p-5 px-[18px]">
-      <div class="flex items-center gap-2 mb-4">
-        <Clock :size="14" :stroke-width="1.5" class="text-[#999]" />
-        <h2 class="text-xs font-semibold text-foreground">时段记录</h2>
-        <label class="ml-auto flex items-center gap-1.5 cursor-pointer">
-          <input type="checkbox" v-model="showPrevDays" class="size-3.5" />
-          <span class="text-xs text-[#999] leading-none">展示前两日时段热力</span>
+    <!-- 4. 时段记录 · 24 格条带 + 柑橘色阶 -->
+    <section class="card p-5 px-6 reveal reveal-3">
+      <div class="flex items-center gap-2.5 mb-4">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center"
+             style="background: hsl(27 92% 63% / 0.12); color: hsl(27 92% 50%);">
+          <Clock :size="14" :stroke-width="2.5" />
+        </div>
+        <h2 class="font-display text-[15px] font-semibold tracking-tight">时段记录</h2>
+        <label class="ml-auto flex items-center gap-2 cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors">
+          <input type="checkbox" v-model="showPrevDays" class="size-3.5 accent-primary cursor-pointer" />
+          <span>展示前两日时段热力</span>
         </label>
       </div>
       <!-- 24 格条带 -->
-      <div class="flex items-end gap-0.5 h-14 mb-2">
-        <div v-for="h in 24" :key="h" class="relative flex-1 h-full">
+      <div class="flex items-end gap-[3px] h-16 mb-2">
+        <div v-for="h in 24" :key="h" class="relative flex-1 h-full group">
           <div
             v-if="showPrevDays"
-            class="absolute inset-x-0 bottom-0 rounded-sm transition-all"
-            :style="{ height: barHeight(dayBeforeCounts[h - 1]) + '%', background: barColor(dayBeforeCounts[h - 1]), opacity: 0.35 }"
+            class="absolute inset-x-0 bottom-0 rounded-sm transition-all duration-500"
+            :style="{ height: barHeight(dayBeforeCounts[h - 1]) + '%', background: barColor(dayBeforeCounts[h - 1]), opacity: 0.32, transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }"
             :title="`前天 ${h - 1}:00 — ${dayBeforeCounts[h - 1]} 条`"
           ></div>
           <div
             v-if="showPrevDays"
-            class="absolute inset-x-0 bottom-0 rounded-sm transition-all"
-            :style="{ height: barHeight(yesterdayCounts[h - 1]) + '%', background: barColor(yesterdayCounts[h - 1]), opacity: 0.6 }"
+            class="absolute inset-x-0 bottom-0 rounded-sm transition-all duration-500"
+            :style="{ height: barHeight(yesterdayCounts[h - 1]) + '%', background: barColor(yesterdayCounts[h - 1]), opacity: 0.6, transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }"
             :title="`昨天 ${h - 1}:00 — ${yesterdayCounts[h - 1]} 条`"
           ></div>
           <div
-            class="absolute inset-x-0 bottom-0 rounded-sm transition-all"
-            :style="{ height: barHeight(todayCounts[h - 1]) + '%', background: barColor(todayCounts[h - 1]) }"
+            class="absolute inset-x-0 bottom-0 rounded-sm transition-all duration-500 group-hover:scale-y-110 origin-bottom"
+            :style="{ height: barHeight(todayCounts[h - 1]) + '%', background: barColor(todayCounts[h - 1]), transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }"
             :title="`${h - 1}:00 — ${todayCounts[h - 1]} 条记录`"
           ></div>
         </div>
       </div>
-      <div class="flex justify-between text-xs text-[#bbb] mb-2">
+      <div class="flex justify-between text-[10.5px] text-muted-foreground font-mono mb-3">
         <span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span><span>23:59</span>
       </div>
-      <div class="flex items-center gap-1 text-xs text-[#999]">
+      <div class="flex items-center gap-1 text-[10.5px] text-muted-foreground font-mono">
         <span>少</span>
-        <div class="w-3 h-3 rounded-sm bg-primary/20"></div>
-        <div class="w-3 h-3 rounded-sm bg-primary/40"></div>
-        <div class="w-3 h-3 rounded-sm bg-primary/60"></div>
-        <div class="w-3 h-3 rounded-sm bg-primary/80"></div>
-        <div class="w-3 h-3 rounded-sm bg-primary"></div>
+        <div class="w-3 h-3 rounded-sm" style="background: hsl(27 92% 63% / 0.22)"></div>
+        <div class="w-3 h-3 rounded-sm" style="background: hsl(27 92% 63% / 0.42)"></div>
+        <div class="w-3 h-3 rounded-sm" style="background: hsl(27 92% 63% / 0.65)"></div>
+        <div class="w-3 h-3 rounded-sm" style="background: hsl(27 92% 63% / 0.85)"></div>
+        <div class="w-3 h-3 rounded-sm" style="background: hsl(27 92% 55%)"></div>
         <span>多</span>
       </div>
     </section>
 
-    <!-- 5. 已连接显示器 -->
-    <section class="rounded-[10px] bg-black/[0.02] p-5 px-[18px]">
-      <div class="flex items-center gap-2 mb-4">
-        <Monitor :size="14" :stroke-width="1.5" class="text-[#999]" />
-        <h2 class="text-xs font-semibold text-foreground">已连接显示器</h2>
-        <span class="text-xs text-[#999] ml-1">{{ displays.length }} 台</span>
+    <!-- 5. 已连接显示器 · card hover -->
+    <section class="card p-5 px-6 reveal reveal-4">
+      <div class="flex items-center gap-2.5 mb-4">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center"
+             style="background: hsl(165 21% 57% / 0.16); color: hsl(165 30% 32%);">
+          <Monitor :size="14" :stroke-width="2.5" />
+        </div>
+        <h2 class="font-display text-[15px] font-semibold tracking-tight">已连接显示器</h2>
+        <span class="chip chip-cool">{{ displays.length }} 台</span>
       </div>
-      <div class="space-y-2">
-        <div v-for="d in displays" :key="d.id" class="flex items-center gap-3 p-3 rounded-md bg-black/[0.02]">
-          <div class="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+      <div v-if="displays.length === 0" class="text-sm text-muted-foreground text-center py-6">
+        暂无显示器信息
+      </div>
+      <div v-else class="grid grid-cols-2 gap-2.5">
+        <div v-for="d in displays" :key="d.id"
+             class="card-hover card p-3.5 flex items-center gap-3 cursor-default">
+          <div class="w-10 h-10 rounded-[10px] flex items-center justify-center flex-shrink-0 transition-all duration-300"
+               :style="{ background: d.isPrimary ? 'linear-gradient(135deg, hsl(27 92% 63%), hsl(27 92% 55%))' : 'hsl(var(--muted))', color: d.isPrimary ? 'white' : 'hsl(var(--muted-foreground))' }">
             <Monitor class="w-5 h-5" />
           </div>
           <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium flex items-center gap-2">
-              {{ d.label }}
-              <span v-if="d.isPrimary" class="text-[10px] px-1.5 py-px rounded bg-primary/10 text-primary">主显示器</span>
+            <div class="text-[13.5px] font-semibold flex items-center gap-2 text-foreground">
+              <span class="truncate">{{ d.label }}</span>
+              <span v-if="d.isPrimary" class="chip !text-[10px] !py-0 !px-1.5">主显示器</span>
             </div>
-            <div class="text-xs text-[#999] mt-0.5">{{ d.width }}×{{ d.height }} · {{ d.scaleFactor }}x · 坐标 {{ d.x }}, {{ d.y }}</div>
+            <div class="text-[11.5px] text-muted-foreground mt-0.5 font-mono">{{ d.width }}×{{ d.height }} · {{ d.scaleFactor }}x · {{ d.x }},{{ d.y }}</div>
           </div>
-        </div>
-        <div v-if="displays.length === 0" class="text-sm text-[#999] text-center py-4">
-          暂无显示器信息
         </div>
       </div>
     </section>
   </div>
 </template>
+
+<style scoped>
+.animate-fly-in { animation: flyIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; }
+</style>

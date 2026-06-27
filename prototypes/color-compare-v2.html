@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>配色对比 V2 · 4 个新主色候选</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#FCFBF7;color:#2C2A26;font-family:'Plus Jakarta Sans','Inter Tight',-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased;font-size:13px;line-height:1.5}
+  .mono{font-family:'JetBrains Mono',monospace}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;font-family:inherit}
+
+  .head{padding:40px 32px 24px;max-width:1480px;margin:0 auto}
+  .head .crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:#A39B8B;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px}
+  .head h1{font-size:30px;font-weight:700;letter-spacing:-0.02em;margin:0 0 8px;color:#2C2A26}
+  .head .sub{color:#6E6557;font-size:14px;max-width:780px;line-height:1.6}
+  .head .hint{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+  .head .hint .b{padding:4px 10px;background:#FFFFFF;border:1px solid #ECE7DA;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#6E6557;letter-spacing:0.04em}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:1480px;margin:0 auto;padding:24px 32px 80px}
+
+  .col{background:#FFFFFF;border:1px solid #ECE7DA;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 0 rgba(44,42,38,.02)}
+  .col-h{padding:16px;border-bottom:1px solid #ECE7DA;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;background:#F9F6EE}
+  .col-h .l{display:flex;flex-direction:column;gap:6px}
+  .col-h .sw-row{display:flex;gap:4px}
+  .col-h .sw{width:22px;height:22px;border-radius:6px;flex:none;box-shadow:0 1px 2px rgba(44,42,38,.08)}
+  .col-h .lbl{font-weight:700;font-size:14px;letter-spacing:-0.005em;color:#2C2A26}
+  .col-h .sub{font-size:11px;color:#6E6557;line-height:1.4;margin-top:4px}
+  .col-h .hex{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#6E6557;letter-spacing:0.04em;text-align:right}
+
+  .col-body{padding:16px;display:flex;flex-direction:column;gap:14px}
+
+  /* Brand mark + display ic (the elements user pointed at) */
+  .brand-row{display:flex;align-items:center;gap:14px;padding:10px 12px;background:#F9F6EE;border-radius:10px;border:1px solid #ECE7DA}
+  .brand-row .mark{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 2px 6px var(--shadow)}
+  .brand-row .name{font-weight:700;font-size:13px;letter-spacing:-0.01em;color:#2C2A26}
+  .brand-row .name .v{font-weight:500;color:#A39B8B;font-size:10.5px;margin-left:4px}
+  .brand-row .ic{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--cool);flex:none}
+  .brand-row .ic svg{width:15px;height:15px;stroke-width:1.6}
+
+  .demo{background:#FCFBF7;border:1px solid #ECE7DA;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+  .demo .ttl{font-family:'JetBrains Mono',monospace;font-size:10px;color:#A39B8B;letter-spacing:0.08em;text-transform:uppercase;font-weight:600}
+
+  /* Nav */
+  .nv{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:6px;font-size:12px;font-weight:500;color:#6E6557}
+  .nv.on{background:var(--soft);color:var(--c);font-weight:600}
+  .nv.on .dot{background:var(--c)}
+  .nv .dot{width:5px;height:5px;border-radius:50%;background:transparent}
+  .nv svg{width:13px;height:13px;stroke-width:1.6;flex:none}
+
+  /* Buttons */
+  .btns{display:flex;gap:6px;flex-wrap:wrap}
+  .btn{padding:6px 10px;border-radius:6px;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:5px;border:1px solid transparent;transition:all .12s}
+  .btn.solid{background:var(--c);color:#fff;box-shadow:0 1px 0 var(--shadow)}
+  .btn.outline{background:transparent;border-color:#ECE7DA;color:#2C2A26}
+  .btn.ghost{background:transparent;color:#6E6557}
+  .btn svg{width:11px;height:11px;stroke-width:2}
+
+  /* Hero mini */
+  .hero-mini{background:linear-gradient(135deg,var(--light-cool) 0%,#F8F4ED 55%,var(--light) 100%);border:1px solid #ECE7DA;border-radius:10px;padding:14px 16px;position:relative;overflow:hidden}
+  .hero-mini::after{content:"";position:absolute;top:-30px;right:-20px;width:120px;height:120px;background:radial-gradient(circle,var(--soft),transparent 60%);pointer-events:none}
+  .hero-mini h3{font-size:14px;font-weight:700;letter-spacing:-0.01em;margin:0 0 4px;color:#2C2A26;position:relative;z-index:1}
+  .hero-mini p{margin:0;font-size:11px;color:#6E6557;line-height:1.4;position:relative;z-index:1}
+
+  /* Pills */
+  .pills{display:flex;flex-wrap:wrap;gap:4px}
+  .pill{padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:600;background:rgba(255,255,255,.7);color:#6E6557;border:1px solid var(--pill-border);display:inline-flex;align-items:center;gap:4px;backdrop-filter:blur(4px)}
+  .pill svg{width:9px;height:9px;stroke-width:2.5;color:var(--good)}
+
+  /* Check */
+  .check-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;color:#2C2A26}
+  .check{width:14px;height:14px;border:1.5px solid #ECE7DA;border-radius:4px;display:flex;align-items:center;justify-content:center;background:#FFFFFF;flex:none}
+  .check.on{background:var(--c);border-color:var(--c);color:#fff}
+  .check svg{width:9px;height:9px;stroke-width:3;opacity:0}
+  .check.on svg{opacity:1}
+
+  /* Tag */
+  .tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10.5px;font-weight:600;background:var(--soft);color:var(--c)}
+
+  /* Stat */
+  .stat{display:flex;flex-direction:column;gap:2px}
+  .stat .v{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-0.02em;color:#2C2A26;line-height:1}
+  .stat .v .u{font-size:11px;color:#A39B8B;margin-left:2px}
+  .stat .l{font-size:10px;color:#A39B8B;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;font-family:'JetBrains Mono',monospace}
+
+  /* Bars */
+  .bars{display:flex;align-items:flex-end;gap:1.5px;height:40px}
+  .bar{flex:1;background:#ECE7DA;border-radius:1px}
+  .bar.on{background:linear-gradient(180deg,var(--c) 0%,var(--c2) 100%)}
+  .bar.peak{background:linear-gradient(180deg,var(--c) 0%,var(--c2) 100%);box-shadow:0 -1px 4px var(--soft)}
+
+  /* REC button */
+  .rec-btn{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--c),var(--c2));color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px var(--shadow),inset 0 1px 0 rgba(255,255,255,.4);flex:none}
+  .rec-btn svg{width:18px;height:18px;stroke-width:2;fill:currentColor}
+
+  /* Bento tinted */
+  .bento-mini{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .b-card{border-radius:8px;padding:10px 12px;position:relative;overflow:hidden}
+  .b-card.cool{background:linear-gradient(135deg,var(--light-cool),#DDEEEF);border:1px solid var(--cool-soft)}
+  .b-card.warm{background:linear-gradient(135deg,var(--light),#F9DDC4);border:1px solid var(--warm-soft)}
+  .b-card .l{font-size:9.5px;font-weight:700;color:#A39B8B;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px}
+  .b-card .v{font-size:18px;font-weight:700;color:#2C2A26;letter-spacing:-0.02em;line-height:1}
+
+  /* Live */
+  .live{display:inline-flex;align-items:center;gap:5px;padding:2px 7px;background:var(--good-light);color:var(--good);border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600}
+  .live .dot{width:5px;height:5px;border-radius:50%;background:var(--good)}
+
+  .spacer{flex:1}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div class="crumb">// color_compare_v2 · 2026-06-27</div>
+  <h1>4 个新主色候选 · 解决"还是闷"的问题</h1>
+  <p class="sub">底色不变（保持 #FCFBF7 / #FFFFFF / 浅米色辅助）。只把 accent 重新调色，方向是：把"暖琥珀"这个大方向往下分 4 个变体，每个都比 #DD7E4A 更轻、更亮、更通透。同时搭配各自的辅助冷色，让冷暖对比在视觉上更清爽。</p>
+  <div class="hint">
+    <span class="b">A · 鲜杏 Fresh Apricot</span>
+    <span class="b">B · 落日珊瑚 Sunset Coral</span>
+    <span class="b">C · 柑橘亮 Citrus Pop</span>
+    <span class="b">D · 蜜糖金 Honey Gold</span>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- A · Fresh Apricot -->
+  <div class="col" style="--c:#F0A180;--c2:#F8C8B0;--soft:rgba(240,161,128,.12);--light:#FBE0D2;--light-cool:#EAF2F0;--shadow:rgba(240,161,128,.28);--pill-border:rgba(240,161,128,.22);--warm-soft:rgba(240,161,128,.18);--cool:#6B9DAD;--cool-soft:rgba(107,157,173,.18);--good:#6B9B7E;--good-light:#E5F0E8">
+    <div class="col-h">
+      <div class="l">
+        <div class="sw-row">
+          <div class="sw" style="background:#F0A180"></div>
+          <div class="sw" style="background:#F8C8B0"></div>
+          <div class="sw" style="background:#FBE0D2"></div>
+        </div>
+        <div>
+          <div class="lbl">A · 鲜杏</div>
+          <div class="sub">Fresh Apricot · 最稳的换法</div>
+        </div>
+      </div>
+      <div class="hex">#F0A180</div>
+    </div>
+    <div class="col-body">
+
+      <!-- 你刚才点的那两个元素 -->
+      <div class="demo">
+        <div class="ttl">// 你点的元素</div>
+        <div class="brand-row">
+          <div class="mark" style="background:linear-gradient(135deg,#F0A180,#F8C8B0)">日</div>
+          <div class="name">牙牙乐<span class="v">v2</span></div>
+          <div class="spacer"></div>
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// REC 按钮（最显眼的 accent 面积）</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="rec-btn"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path><line x1="12" y1="19" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg></button>
+          <div style="font-size:11px;color:#6E6557">现在阴影更柔，<br/>不再有"深色块"感</div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Active Nav</div>
+        <div class="nv"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>今日工作</div>
+        <div class="nv on"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path></svg>生成报告</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Buttons</div>
+        <div class="btns">
+          <span class="btn solid">主要操作</span>
+          <span class="btn outline">次要</span>
+          <span class="btn ghost">幽灵</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Hero 渐变</div>
+        <div class="hero-mini">
+          <h3>你只管工作，日报交给我</h3>
+          <p>静默记录，AI 帮你写好每一份日报。</p>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Trust pills</div>
+        <div class="pills">
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销毁</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Plan</div>
+        <div class="check-row"><div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>整理日报助手需求文档 V2.1</div>
+        <div class="check-row"><div class="check"></div>完成模板编辑器交互</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Bento tinted</div>
+        <div class="bento-mini">
+          <div class="b-card cool"><div class="l">记录条数</div><div class="v">12</div></div>
+          <div class="b-card warm"><div class="l">专注时长</div><div class="v">4.2h</div></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Tag / Stat / Bars / Live</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <span class="tag">开发</span>
+          <span class="tag">沟通</span>
+        </div>
+        <div class="stat" style="margin-bottom:8px"><div class="v">4.2<span class="u">h</span></div><div class="l">focused today</div></div>
+        <div class="bars" style="margin-bottom:8px">
+          <div class="bar" style="height:30%"></div>
+          <div class="bar on" style="height:75%"></div>
+          <div class="bar on peak" style="height:100%"></div>
+          <div class="bar on" style="height:65%"></div>
+          <div class="bar" style="height:20%"></div>
+          <div class="bar" style="height:10%"></div>
+        </div>
+        <span class="live"><span class="dot"></span>rec · recording</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- B · Sunset Coral -->
+  <div class="col" style="--c:#F09A95;--c2:#F8BFB9;--soft:rgba(240,154,149,.12);--light:#FBDEDA;--light-cool:#EEF1F5;--shadow:rgba(240,154,149,.28);--pill-border:rgba(240,154,149,.22);--warm-soft:rgba(240,154,149,.18);--cool:#88A8C5;--cool-soft:rgba(136,168,197,.18);--good:#6B9B7E;--good-light:#E5F0E8">
+    <div class="col-h">
+      <div class="l">
+        <div class="sw-row">
+          <div class="sw" style="background:#F09A95"></div>
+          <div class="sw" style="background:#F8BFB9"></div>
+          <div class="sw" style="background:#FBDEDA"></div>
+        </div>
+        <div>
+          <div class="lbl">B · 落日珊瑚</div>
+          <div class="sub">Sunset Coral · 偏粉，最柔和</div>
+        </div>
+      </div>
+      <div class="hex">#F09A95</div>
+    </div>
+    <div class="col-body">
+
+      <div class="demo">
+        <div class="ttl">// 你点的元素</div>
+        <div class="brand-row">
+          <div class="mark" style="background:linear-gradient(135deg,#F09A95,#F8BFB9)">日</div>
+          <div class="name">牙牙乐<span class="v">v2</span></div>
+          <div class="spacer"></div>
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// REC 按钮</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="rec-btn"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path><line x1="12" y1="19" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg></button>
+          <div style="font-size:11px;color:#6E6557">珊瑚色 + 天空蓝辅助，<br/>最通透的组合</div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Active Nav</div>
+        <div class="nv"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>今日工作</div>
+        <div class="nv on"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path></svg>生成报告</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Buttons</div>
+        <div class="btns">
+          <span class="btn solid">主要操作</span>
+          <span class="btn outline">次要</span>
+          <span class="btn ghost">幽灵</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Hero 渐变</div>
+        <div class="hero-mini" style="background:linear-gradient(135deg,#EEF1F5 0%,#F8F0EE 55%,#FBDEDA 100%)">
+          <h3>你只管工作，日报交给我</h3>
+          <p>静默记录，AI 帮你写好每一份日报。</p>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Trust pills</div>
+        <div class="pills">
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销毁</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Plan</div>
+        <div class="check-row"><div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>整理日报助手需求文档 V2.1</div>
+        <div class="check-row"><div class="check"></div>完成模板编辑器交互</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Bento tinted</div>
+        <div class="bento-mini">
+          <div class="b-card cool" style="background:linear-gradient(135deg,#EEF1F5,#D9E4EE);border-color:rgba(136,168,197,.18)"><div class="l">记录条数</div><div class="v">12</div></div>
+          <div class="b-card warm"><div class="l">专注时长</div><div class="v">4.2h</div></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Tag / Stat / Bars / Live</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <span class="tag">开发</span>
+          <span class="tag">沟通</span>
+        </div>
+        <div class="stat" style="margin-bottom:8px"><div class="v">4.2<span class="u">h</span></div><div class="l">focused today</div></div>
+        <div class="bars" style="margin-bottom:8px">
+          <div class="bar" style="height:30%"></div>
+          <div class="bar on" style="height:75%"></div>
+          <div class="bar on peak" style="height:100%"></div>
+          <div class="bar on" style="height:65%"></div>
+          <div class="bar" style="height:20%"></div>
+          <div class="bar" style="height:10%"></div>
+        </div>
+        <span class="live"><span class="dot"></span>rec · recording</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- C · Citrus Pop -->
+  <div class="col" style="--c:#F5A04D;--c2:#F8B889;--soft:rgba(245,160,77,.12);--light:#FCE0CA;--light-cool:#E8F0EC;--shadow:rgba(245,160,77,.3);--pill-border:rgba(245,160,77,.22);--warm-soft:rgba(245,160,77,.18);--cool:#7AAA9B;--cool-soft:rgba(122,170,155,.18);--good:#6B9B7E;--good-light:#E5F0E8">
+    <div class="col-h">
+      <div class="l">
+        <div class="sw-row">
+          <div class="sw" style="background:#F5A04D"></div>
+          <div class="sw" style="background:#F8B889"></div>
+          <div class="sw" style="background:#FCE0CA"></div>
+        </div>
+        <div>
+          <div class="lbl">C · 柑橘亮</div>
+          <div class="sub">Citrus Pop · 最亮，最有活力</div>
+        </div>
+      </div>
+      <div class="hex">#F5A04D</div>
+    </div>
+    <div class="col-body">
+
+      <div class="demo">
+        <div class="ttl">// 你点的元素</div>
+        <div class="brand-row">
+          <div class="mark" style="background:linear-gradient(135deg,#F5A04D,#F8B889)">日</div>
+          <div class="name">牙牙乐<span class="v">v2</span></div>
+          <div class="spacer"></div>
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// REC 按钮</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="rec-btn"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path><line x1="12" y1="19" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg></button>
+          <div style="font-size:11px;color:#6E6557">饱和度最高，能量感最强。<br/>如果你觉得"闷"是因为不够亮</div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Active Nav</div>
+        <div class="nv"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>今日工作</div>
+        <div class="nv on"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path></svg>生成报告</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Buttons</div>
+        <div class="btns">
+          <span class="btn solid">主要操作</span>
+          <span class="btn outline">次要</span>
+          <span class="btn ghost">幽灵</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Hero 渐变</div>
+        <div class="hero-mini" style="background:linear-gradient(135deg,#E8F0EC 0%,#F8F4ED 55%,#FCE0CA 100%)">
+          <h3>你只管工作，日报交给我</h3>
+          <p>静默记录，AI 帮你写好每一份日报。</p>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Trust pills</div>
+        <div class="pills">
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销毁</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Plan</div>
+        <div class="check-row"><div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>整理日报助手需求文档 V2.1</div>
+        <div class="check-row"><div class="check"></div>完成模板编辑器交互</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Bento tinted</div>
+        <div class="bento-mini">
+          <div class="b-card cool" style="background:linear-gradient(135deg,#E8F0EC,#D5E5DD);border-color:rgba(122,170,155,.18)"><div class="l">记录条数</div><div class="v">12</div></div>
+          <div class="b-card warm"><div class="l">专注时长</div><div class="v">4.2h</div></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Tag / Stat / Bars / Live</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <span class="tag">开发</span>
+          <span class="tag">沟通</span>
+        </div>
+        <div class="stat" style="margin-bottom:8px"><div class="v">4.2<span class="u">h</span></div><div class="l">focused today</div></div>
+        <div class="bars" style="margin-bottom:8px">
+          <div class="bar" style="height:30%"></div>
+          <div class="bar on" style="height:75%"></div>
+          <div class="bar on peak" style="height:100%"></div>
+          <div class="bar on" style="height:65%"></div>
+          <div class="bar" style="height:20%"></div>
+          <div class="bar" style="height:10%"></div>
+        </div>
+        <span class="live"><span class="dot"></span>rec · recording</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- D · Honey Gold -->
+  <div class="col" style="--c:#E5B870;--c2:#F0D296;--soft:rgba(229,184,112,.12);--light:#F8E8C8;--light-cool:#E8F1F4;--shadow:rgba(229,184,112,.3);--pill-border:rgba(229,184,112,.25);--warm-soft:rgba(229,184,112,.18);--cool:#6B9DAD;--cool-soft:rgba(107,157,173,.18);--good:#6B9B7E;--good-light:#E5F0E8">
+    <div class="col-h">
+      <div class="l">
+        <div class="sw-row">
+          <div class="sw" style="background:#E5B870"></div>
+          <div class="sw" style="background:#F0D296"></div>
+          <div class="sw" style="background:#F8E8C8"></div>
+        </div>
+        <div>
+          <div class="lbl">D · 蜜糖金</div>
+          <div class="sub">Honey Gold · 偏黄，最暖柔</div>
+        </div>
+      </div>
+      <div class="hex">#E5B870</div>
+    </div>
+    <div class="col-body">
+
+      <div class="demo">
+        <div class="ttl">// 你点的元素</div>
+        <div class="brand-row">
+          <div class="mark" style="background:linear-gradient(135deg,#E5B870,#F0D296)">日</div>
+          <div class="name">牙牙乐<span class="v">v2</span></div>
+          <div class="spacer"></div>
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// REC 按钮</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="rec-btn"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path><line x1="12" y1="19" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg></button>
+          <div style="font-size:11px;color:#6E6557">饱和度最低，最柔。<br/>如果连 C 都嫌"刺眼"</div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Active Nav</div>
+        <div class="nv"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>今日工作</div>
+        <div class="nv on"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path></svg>生成报告</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Buttons</div>
+        <div class="btns">
+          <span class="btn solid">主要操作</span>
+          <span class="btn outline">次要</span>
+          <span class="btn ghost">幽灵</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Hero 渐变</div>
+        <div class="hero-mini" style="background:linear-gradient(135deg,#E8F1F4 0%,#F8F4ED 55%,#F8E8C8 100%)">
+          <h3>你只管工作，日报交给我</h3>
+          <p>静默记录，AI 帮你写好每一份日报。</p>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Trust pills</div>
+        <div class="pills">
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图即销毁</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据本地</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Plan</div>
+        <div class="check-row"><div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>整理日报助手需求文档 V2.1</div>
+        <div class="check-row"><div class="check"></div>完成模板编辑器交互</div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Bento tinted</div>
+        <div class="bento-mini">
+          <div class="b-card cool"><div class="l">记录条数</div><div class="v">12</div></div>
+          <div class="b-card warm"><div class="l">专注时长</div><div class="v">4.2h</div></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="ttl">// Tag / Stat / Bars / Live</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <span class="tag">开发</span>
+          <span class="tag">沟通</span>
+        </div>
+        <div class="stat" style="margin-bottom:8px"><div class="v">4.2<span class="u">h</span></div><div class="l">focused today</div></div>
+        <div class="bars" style="margin-bottom:8px">
+          <div class="bar" style="height:30%"></div>
+          <div class="bar on" style="height:75%"></div>
+          <div class="bar on peak" style="height:100%"></div>
+          <div class="bar on" style="height:65%"></div>
+          <div class="bar" style="height:20%"></div>
+          <div class="bar" style="height:10%"></div>
+        </div>
+        <span class="live"><span class="dot"></span>rec · recording</span>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div style="max-width:1480px;margin:0 auto;padding:0 32px 80px">
+  <div style="background:#FFFFFF;border:1px solid #ECE7DA;border-radius:14px;padding:24px 28px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px">
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#A39B8B;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">A · 鲜杏</div>
+      <div style="font-size:12px;color:#6E6557;line-height:1.55">保留暖橙感觉，单纯把饱和度降下来、亮度提上去。最小风险，最稳的迁移。</div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#A39B8B;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">B · 落日珊瑚</div>
+      <div style="font-size:12px;color:#6E6557;line-height:1.55">往粉红方向走。配天空蓝辅助色，整体最柔最轻。但偏离"琥珀"最远。</div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#A39B8B;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">C · 柑橘亮</div>
+      <div style="font-size:12px;color:#6E6557;line-height:1.55">饱和度最高，最亮最有活力。如果之前嫌"闷"是因为亮度不够，选这个。</div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#A39B8B;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-weight:600">D · 蜜糖金</div>
+      <div style="font-size:12px;color:#6E6557;line-height:1.55">往黄方向走，最接近"晨光"。最柔，攻击性最低。配合冷色辅助反差最小。</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

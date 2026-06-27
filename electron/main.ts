@@ -19,7 +19,7 @@ import { startScreenshot, stopScreenshot, isScreenshotRunning, captureNow } from
 import { startAppTracker, stopAppTracker } from './appTracker'
 import { startApiServer, stopApiServer, isApiServerRunning, regenerateApiToken } from './api-server'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = (typeof __dirname !== 'undefined' ? __dirname : process.cwd())
 
 app.setName('牙牙乐日报助手')
 

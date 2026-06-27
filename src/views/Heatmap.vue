@@ -153,7 +153,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="p-6 max-w-5xl mx-auto">
+  <div class="p-6 px-7 max-w-5xl mx-auto w-full h-full overflow-y-auto min-h-0">
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-bold">时段热力图</h1>

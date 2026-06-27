@@ -132,7 +132,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="p-6 max-w-5xl mx-auto">
+  <div class="p-6 px-7 max-w-5xl mx-auto w-full h-full overflow-y-auto min-h-0">
     <!-- 错误提示 -->
     <div v-if="errorMessage" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground px-4 py-2 rounded-md shadow-lg text-sm flex items-center gap-2 transition-all">
       <span>{{ errorMessage }}</span>

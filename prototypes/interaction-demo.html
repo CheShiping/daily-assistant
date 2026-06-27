@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>牙牙乐 · 交互可玩性 demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* 暖白底 - 清亮 */
+    --bg: #FCFBF7;
+    --bg-2: #F6F2E9;
+    --surface: #FFFFFF;
+    --surface-2: #FBF7EC;
+    --surface-3: #F1ECDC;
+    --border: #ECE7DA;
+    --border-2: #DCD4C0;
+
+    /* 文字 - 柔中深色 */
+    --text: #2C2A26;
+    --text-2: #6E6557;
+    --text-3: #A39B8B;
+
+    /* 柑橘亮主色 (锁定) */
+    --accent: #F5A04D;
+    --accent-2: #DD8233;
+    --accent-3: #B05E1C;
+    --accent-soft: rgba(245, 160, 77, .12);
+    --accent-light: #FCE7D2;
+    --accent-glow: rgba(245, 160, 77, .25);
+
+    /* 薄荷辅助 (冷色清亮感) */
+    --cool-1: #7AAA9B;
+    --cool-2: #6B9DAD;
+    --cool-soft: rgba(122, 170, 155, .12);
+    --cool-light: #E5F0EC;
+
+    /* 状态色 - 全部偏冷偏亮 */
+    --good: #6B9B7E;
+    --good-light: #E5F0E8;
+    --warn: #D89A4E;
+    --warn-light: #FAEED8;
+    --danger: #D67849;
+    --danger-light: #F8E2D2;
+
+    /* 圆角 (Shape Lock) */
+    --r-sm: 8px;
+    --r: 12px;
+    --r-lg: 16px;
+    --r-pill: 999px;
+
+    /* 字体 (方案 3) */
+    --font-display: 'Bricolage Grotesque', sans-serif;
+    --font-body: 'Inter Tight', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Spring physics (与设计一致) */
+    --spring: cubic-bezier(0.16, 1, 0.3, 1);
+    --spring-soft: cubic-bezier(0.34, 1.2, 0.64, 1);
+  }
+
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font-body);-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.55}
+  .display{font-family:var(--font-display);letter-spacing:-0.02em}
+  .mono{font-family:var(--font-mono)}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;letter-spacing:inherit;font-family:inherit}
+  ::selection{background:var(--accent-soft);color:var(--accent-3)}
+
+  /* 顶栏 */
+  .topnav{position:sticky;top:0;z-index:50;background:rgba(252,251,247,.85);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;gap:20px}
+  .topnav .crumbs{font-size:12.5px;color:var(--text-2);font-weight:500}
+  .topnav .crumbs b{color:var(--text);font-weight:600}
+  .topnav .title{margin-left:auto;font-family:var(--font-display);font-weight:700;font-size:15px;letter-spacing:-0.01em}
+  .topnav .badge{font-family:var(--font-mono);font-size:10.5px;font-weight:600;padding:3px 9px;background:var(--accent-soft);color:var(--accent-3);border-radius:var(--r-pill);text-transform:uppercase;letter-spacing:0.08em}
+
+  /* 主体 */
+  .wrap{max-width:1180px;margin:0 auto;padding:36px 32px 80px}
+
+  .head{margin-bottom:36px}
+  .head h1{font-family:var(--font-display);font-size:34px;font-weight:700;letter-spacing:-0.03em;line-height:1.1;margin:0 0 8px}
+  .head h1 .hl{color:var(--accent);font-style:italic}
+  .head p{color:var(--text-2);font-size:14.5px;margin:0;max-width:640px}
+
+  /* 9 个模块 grid - 3 列变奏 */
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
+  .col-6{grid-column:span 6}
+  .col-4{grid-column:span 4}
+  .col-8{grid-column:span 8}
+  .col-12{grid-column:span 12}
+
+  /* 模块卡 */
+  .mod{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:24px 26px;box-shadow:0 1px 0 rgba(44,42,38,.025);position:relative;overflow:hidden}
+  .mod-num{font-family:var(--font-mono);font-size:10.5px;font-weight:600;color:var(--text-3);letter-spacing:0.1em;margin-bottom:6px}
+  .mod-title{font-family:var(--font-display);font-size:18px;font-weight:600;letter-spacing:-0.015em;margin:0 0 4px;color:var(--text)}
+  .mod-sub{font-size:12.5px;color:var(--text-2);margin:0 0 20px;line-height:1.5}
+  .mod-stage{margin-top:18px;padding:22px 18px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);position:relative;min-height:140px}
+  .mod-foot{margin-top:14px;font-size:11.5px;color:var(--text-3);font-family:var(--font-mono);line-height:1.5}
+
+  /* 标签对比 (Before / After) */
+  .row-vs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  .col-vs h4{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.12em;margin:0 0 8px;display:flex;align-items:center;gap:6px}
+  .col-vs h4 .dot{width:6px;height:6px;border-radius:50%}
+  .col-vs.before h4 .dot{background:var(--danger)}
+  .col-vs.after h4 .dot{background:var(--good)}
+  .col-vs .stage{padding:18px 14px;border-radius:var(--r);min-height:130px;display:flex;align-items:center;justify-content:center}
+  .col-vs.before .stage{background:#F0EDE5;border:1px solid #E0DBC8}
+  .col-vs.after .stage{background:#FFFFFF;border:1px solid var(--border);box-shadow:0 2px 8px -4px rgba(44,42,38,.06)}
+
+  /* ========== Module 1: 按钮状态机 ========== */
+  .btn-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center}
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:var(--r-pill);font-weight:600;font-size:13px;transition:transform .25s var(--spring),background .2s ease,box-shadow .2s ease;position:relative;overflow:hidden;will-change:transform}
+  .btn.primary{background:var(--accent);color:#fff;box-shadow:0 4px 12px var(--accent-glow),inset 0 1px 0 rgba(255,255,255,.3)}
+  .btn.primary:hover{background:var(--accent-2);transform:translateY(-1px);box-shadow:0 6px 18px var(--accent-glow),inset 0 1px 0 rgba(255,255,255,.3)}
+  .btn.primary:active{transform:translateY(0) scale(.97);background:var(--accent-3)}
+  .btn.primary .shine{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);transition:left .6s var(--spring)}
+  .btn.primary:hover .shine{left:100%}
+
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border-2)}
+  .btn.ghost:hover{background:var(--surface-2);border-color:var(--text-3)}
+
+  .btn.cool{background:var(--cool-1);color:#fff;box-shadow:0 4px 12px rgba(122,170,155,.3)}
+
+  .btn.loading{pointer-events:none;color:transparent}
+  .btn.loading::after{content:"";position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .btn.success{background:var(--good);color:#fff;pointer-events:none;box-shadow:0 4px 12px rgba(107,155,126,.3)}
+  .btn.success::before{content:"";position:absolute;left:14px;width:14px;height:7px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) scale(0);animation:checkIn .5s var(--spring) .1s forwards}
+  @keyframes checkIn{to{transform:rotate(-45deg) scale(1)}}
+
+  /* Old button - 静态灰 */
+  .btn-old{padding:8px 18px;background:#E5E0D0;color:#8B8270;border-radius:6px;font-size:13px;font-weight:500;transition:background .15s ease}
+  .btn-old:hover{background:#D8D2BD}
+
+  /* ========== Module 2: Plan 列表 ========== */
+  .plan-list{display:flex;flex-direction:column;gap:8px}
+  .plan-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--r);transition:all .3s var(--spring);transform-origin:left center}
+  .plan-item .ck{width:18px;height:18px;border:1.5px solid var(--border-2);border-radius:5px;display:flex;align-items:center;justify-content:center;transition:all .25s var(--spring);flex:none;background:#fff}
+  .plan-item .ck svg{width:11px;height:11px;opacity:0;transform:scale(.4);transition:all .25s var(--spring-soft)}
+  .plan-item .label{flex:1;font-size:13px;color:var(--text);transition:color .2s ease}
+  .plan-item .time{font-family:var(--font-mono);font-size:11px;color:var(--text-3)}
+  .plan-item.done{background:var(--good-light);border-color:#C9DDCB}
+  .plan-item.done .ck{background:var(--good);border-color:var(--good)}
+  .plan-item.done .ck svg{opacity:1;transform:scale(1);color:#fff}
+  .plan-item.done .label{color:var(--text-3);text-decoration:line-through;text-decoration-color:rgba(107,155,126,.5)}
+  .plan-item.removing{transform:translateX(20px) scale(.95);opacity:0;max-height:0;padding-top:0;padding-bottom:0;margin:0;border-width:0;overflow:hidden}
+  .plan-item.entering{animation:flyIn .5s var(--spring) backwards}
+  @keyframes flyIn{from{opacity:0;transform:translateX(-12px) scale(.96)}}
+  .plan-item.pop{animation:pop .4s var(--spring-soft)}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.02);box-shadow:0 6px 18px -8px var(--accent-glow)}100%{transform:scale(1)}}
+
+  .plan-controls{display:flex;gap:6px;margin-top:12px}
+  .plan-ctrl{flex:1;padding:7px 10px;font-size:11.5px;font-weight:600;background:#fff;border:1px solid var(--border);border-radius:8px;color:var(--text-2);transition:all .2s ease;display:flex;align-items:center;justify-content:center;gap:5px}
+  .plan-ctrl:hover{background:var(--surface-2);color:var(--text);border-color:var(--border-2)}
+  .plan-ctrl.add{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .plan-ctrl.add:hover{background:var(--accent-2)}
+
+  /* Old plan - 死板灰条 */
+  .plan-old{display:flex;flex-direction:column;gap:4px}
+  .plan-old-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#EFEBE0;border-radius:4px;font-size:12.5px;color:#6E6557}
+  .plan-old-item .box{width:14px;height:14px;border:1px solid #C9C2AE;border-radius:3px;background:#fff}
+  .plan-old-item .done{text-decoration:line-through;color:#A39B8B}
+
+  /* ========== Module 3: Count-up 数字 ========== */
+  .count-stage{display:flex;align-items:baseline;gap:6px;justify-content:center}
+  .count-num{font-family:var(--font-display);font-size:46px;font-weight:700;color:var(--accent);letter-spacing:-0.04em;line-height:1;font-feature-settings:"tnum";font-variant-numeric:tabular-nums}
+  .count-num .u{font-size:18px;font-weight:600;color:var(--text-2);margin-left:2px;letter-spacing:-0.01em}
+  .count-delta{font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--good);background:var(--good-light);padding:2px 8px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:3px;margin-left:6px}
+  .count-delta.up{animation:delIn .6s var(--spring) backwards}
+  @keyframes delIn{from{opacity:0;transform:translateY(6px)}}
+
+  .count-old{font-size:30px;font-weight:700;color:#8B8270;font-family:var(--font-mono)}
+
+  /* ========== Module 4: Skeleton ========== */
+  .skel-card{display:flex;flex-direction:column;gap:9px;width:100%;max-width:280px;margin:0 auto}
+  .skel{background:linear-gradient(90deg,#E8E3D3 0%,#F0EBD8 50%,#E8E3D3 100%);background-size:200% 100%;border-radius:6px;animation:shimmer 1.6s linear infinite;height:12px}
+  .skel.h24{height:24px;width:60%}
+  .skel.w70{width:70%}
+  .skel.w90{width:90%}
+  .skel.w40{width:40%}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .skel-static{background:#E8E3D3;height:12px;border-radius:6px}
+
+  /* ========== Module 5: REC 录制 ========== */
+  .rec-wrap{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .rec-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 14px 7px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--r-pill);font-size:12.5px;font-weight:600;color:var(--text-2);transition:all .35s var(--spring);box-shadow:0 2px 8px -4px rgba(44,42,38,.1)}
+  .rec-pill .dot{width:8px;height:8px;border-radius:50%;background:#C9C2AE;transition:background .3s ease,box-shadow .3s ease}
+  .rec-pill.live{background:#fff;border-color:#F2B4A0;box-shadow:0 4px 16px -6px rgba(214,120,73,.25)}
+  .rec-pill.live .dot{background:var(--danger);animation:pulse 1.4s ease-in-out infinite;box-shadow:0 0 0 0 var(--danger)}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(214,120,73,.5)}50%{box-shadow:0 0 0 8px rgba(214,120,73,0)}}
+  .rec-pill .label{color:var(--text-2);transition:color .25s ease}
+  .rec-pill.live .label{color:var(--danger)}
+  .rec-pill .timer{font-family:var(--font-mono);font-size:11.5px;font-weight:500;color:var(--text-3);margin-left:2px;display:none}
+  .rec-pill.live .timer{display:inline}
+  .rec-toggle{padding:8px 16px;font-size:12px;font-weight:600;background:var(--surface-2);color:var(--text-2);border:1px solid var(--border);border-radius:var(--r-pill);transition:all .2s ease}
+  .rec-toggle:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  .rec-old{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:#E5E0D0;border-radius:4px;font-size:11.5px;color:#8B8270;font-family:var(--font-mono)}
+
+  /* ========== Module 6: 主题切换 ========== */
+  .theme-stage{display:flex;align-items:center;gap:14px;justify-content:center}
+  .theme-card{width:140px;height:84px;border-radius:var(--r);border:1px solid var(--border);padding:10px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden;transition:all .55s var(--spring)}
+  .theme-card.light{background:#fff}
+  .theme-card .bar{height:6px;border-radius:3px;background:#EAE5D2;transition:background .4s ease}
+  .theme-card .bar.accent{width:60%;background:var(--accent-soft)}
+  .theme-card .bar.full{width:100%}
+  .theme-card .bar.short{width:30%;background:var(--cool-soft)}
+  .theme-card.dark{background:#2A2A2A}
+  .theme-card.dark .bar{background:#3D3A33}
+  .theme-card.dark .bar.accent{background:rgba(245,160,77,.3)}
+  .theme-card.dark .bar.short{background:rgba(122,170,155,.3)}
+  .theme-switcher{display:flex;gap:4px;padding:3px;background:#fff;border:1px solid var(--border);border-radius:var(--r-pill)}
+  .theme-btn{padding:6px 12px;font-size:11.5px;font-weight:600;color:var(--text-2);border-radius:var(--r-pill);transition:all .3s var(--spring)}
+  .theme-btn.active{background:var(--text);color:#fff}
+
+  /* ========== Module 7: Card hover ========== */
+  .card-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .hover-card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:14px;transition:transform .35s var(--spring),box-shadow .35s var(--spring),border-color .3s ease;position:relative;overflow:hidden;cursor:pointer}
+  .hover-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--cool-1));transform:scaleX(0);transform-origin:left;transition:transform .4s var(--spring)}
+  .hover-card:hover{transform:translateY(-3px);box-shadow:0 12px 28px -12px rgba(44,42,38,.18),0 0 0 1px var(--border-2);border-color:transparent}
+  .hover-card:hover::before{transform:scaleX(1)}
+  .hover-card .ico{width:32px;height:32px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:10px;transition:all .3s var(--spring)}
+  .hover-card:hover .ico{background:var(--accent);color:#fff;transform:rotate(-6deg) scale(1.05)}
+  .hover-card h5{font-size:13.5px;font-weight:600;margin:0 0 3px}
+  .hover-card p{font-size:11.5px;color:var(--text-2);margin:0;line-height:1.5}
+  .hover-card .arrow{position:absolute;top:14px;right:14px;opacity:0;transform:translateX(-4px);transition:all .3s var(--spring);color:var(--accent)}
+  .hover-card:hover .arrow{opacity:1;transform:translateX(0)}
+
+  .hover-old{background:#EFEBE0;border:1px solid #DDD7C2;border-radius:6px;padding:12px;font-size:12px;color:#6E6557;transition:background .15s ease}
+  .hover-old:hover{background:#E5E0D0}
+
+  /* ========== Module 8: Command palette ========== */
+  .cmd-stage{position:relative;height:180px;background:#fff;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;display:flex;align-items:flex-start;justify-content:center;padding-top:36px}
+  .cmd-trigger{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);font-size:12.5px;color:var(--text-2);transition:all .2s ease;cursor:pointer;box-shadow:0 1px 0 rgba(44,42,38,.04)}
+  .cmd-trigger:hover{border-color:var(--text-3);color:var(--text)}
+  .cmd-trigger kbd{font-family:var(--font-mono);font-size:10px;background:#fff;padding:1px 6px;border:1px solid var(--border);border-radius:4px;color:var(--text-2)}
+  .cmd-overlay{position:absolute;inset:0;background:rgba(44,42,38,.3);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding-top:30px;opacity:0;pointer-events:none;transition:opacity .3s var(--spring);z-index:5}
+  .cmd-overlay.open{opacity:1;pointer-events:auto}
+  .cmd-panel{width:90%;max-width:380px;background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 24px 60px -20px rgba(44,42,38,.4),0 0 0 1px rgba(44,42,38,.04);overflow:hidden;transform:translateY(-10px) scale(.97);opacity:0;transition:all .4s var(--spring)}
+  .cmd-overlay.open .cmd-panel{transform:translateY(0) scale(1);opacity:1}
+  .cmd-input{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border)}
+  .cmd-input svg{width:14px;height:14px;color:var(--text-3)}
+  .cmd-input input{flex:1;border:none;outline:none;font-size:13.5px;background:transparent;color:var(--text);font-family:inherit}
+  .cmd-input input::placeholder{color:var(--text-3)}
+  .cmd-input .esc{font-family:var(--font-mono);font-size:10px;background:var(--surface-2);padding:2px 6px;border-radius:4px;color:var(--text-3)}
+  .cmd-list{padding:6px}
+  .cmd-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:background .15s ease}
+  .cmd-item:hover,.cmd-item.active{background:var(--accent-soft)}
+  .cmd-item.active{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
+  .cmd-item .ico{width:24px;height:24px;border-radius:6px;background:var(--surface-2);color:var(--text-2);display:flex;align-items:center;justify-content:center;flex:none;transition:all .2s ease}
+  .cmd-item.active .ico{background:var(--accent);color:#fff}
+  .cmd-item .text{flex:1;font-size:12.5px;font-weight:500}
+  .cmd-item .text .desc{font-size:11px;color:var(--text-3);font-weight:400;display:block;margin-top:1px}
+  .cmd-item .kbd{font-family:var(--font-mono);font-size:10px;color:var(--text-3)}
+  .cmd-hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10.5px;color:var(--text-3);font-family:var(--font-mono)}
+
+  /* ========== Module 9: Empty state ========== */
+  .empty-stage{display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 0;gap:14px}
+  .empty-illu{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--accent-light),var(--cool-light));display:flex;align-items:center;justify-content:center;position:relative;animation:float 4s ease-in-out infinite}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .empty-illu svg{width:28px;height:28px;color:var(--accent)}
+  .empty-illu::after{content:"";position:absolute;bottom:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--cool-1);border:3px solid var(--surface-2);animation:float 3s ease-in-out infinite reverse}
+  .empty h5{font-family:var(--font-display);font-size:15px;font-weight:600;margin:0;color:var(--text)}
+  .empty p{font-size:12.5px;color:var(--text-2);margin:0;max-width:240px;line-height:1.5}
+  .empty-cta{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--accent);color:#fff;border-radius:var(--r-pill);font-size:12.5px;font-weight:600;box-shadow:0 4px 12px var(--accent-glow);transition:all .25s var(--spring)}
+  .empty-cta:hover{background:var(--accent-2);transform:translateY(-1px)}
+  .empty-old{display:flex;flex-direction:column;align-items:center;padding:18px;gap:8px;color:#A39B8B}
+  .empty-old .ic{width:40px;height:40px;border:1px dashed #C9C2AE;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#C9C2AE}
+  .empty-old p{font-size:12px;margin:0}
+
+  /* Section 标题 */
+  .sec-h{margin:42px 0 18px;display:flex;align-items:baseline;gap:12px}
+  .sec-h h2{font-family:var(--font-display);font-size:22px;font-weight:700;letter-spacing:-0.02em;margin:0}
+  .sec-h .line{flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+  .sec-h .sub{font-size:12px;color:var(--text-3);font-family:var(--font-mono)}
+
+  /* Reveal 入场 */
+  .reveal{opacity:0;transform:translateY(12px);transition:opacity .7s var(--spring),transform .7s var(--spring)}
+  .reveal.in{opacity:1;transform:translateY(0)}
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important}
+    .reveal{opacity:1;transform:none}
+  }
+
+  @media (max-width: 980px){
+    .col-6,.col-4,.col-8{grid-column:span 12}
+    .row-vs{grid-template-columns:1fr}
+    .card-row{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="crumbs">牙牙乐 / <b>交互可玩性 demo</b></span>
+  <span class="badge">v0.3 · motion</span>
+  <span class="title">九个状态</span>
+</nav>
+
+<div class="wrap">
+
+  <header class="head">
+    <h1 class="display">让操作 <span class="hl">值得玩</span></h1>
+    <p>把干瘪的硬切改成会呼吸的过渡。九组对比，覆盖按钮、列表、数字、骨架、录制、主题、卡片、命令面板、空状态。柑橘亮 + 薄荷配色，Bricolage Grotesque + Inter Tight + JetBrains Mono。</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- 1 按钮 -->
+    <section class="mod col-6 reveal" data-r>
+      <div class="mod-num">01 / 09</div>
+      <h3 class="mod-title">按钮状态机</h3>
+      <p class="mod-sub">idle → hover → press → loading → success。五个状态连续播放，不只是颜色变一下。</p>
+      <div class="mod-stage">
+        <div class="row-vs">
+          <div class="col-vs before">
+            <h4><span class="dot"></span>before</h4>
+            <div class="stage">
+              <button class="btn-old">保存</button>
+            </div>
+          </div>
+          <div class="col-vs after">
+            <h4><span class="dot"></span>after</h4>
+            <div class="stage">
+              <div class="btn-row">
+                <button class="btn primary" id="btn-1">保存日报</button>
+                <button class="btn ghost">取消</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mod-foot">hover 上抬 1px · press 缩 0.97 · shine 横扫 600ms · loading spinner · success 勾选 pop in</div>
+    </section>
+
+    <!-- 2 Plan 列表 -->
+    <section class="mod col-6 reveal" data-r>
+      <div class="mod-num">02 / 09</div>
+      <h3 class="mod-title">Plan 列表全周期</h3>
+      <p class="mod-sub">stagger 入场、勾选庆祝、添加 fly-in、删除 collapse。每一条都有来路。</p>
+      <div class="mod-stage">
+        <div class="row-vs">
+          <div class="col-vs before">
+            <h4><span class="dot"></span>before</h4>
+            <div class="stage">
+              <div class="plan-old">
+                <div class="plan-old-item"><div class="box"></div>写日报</div>
+                <div class="plan-old-item"><div class="box"></div>代码 review</div>
+                <div class="plan-old-item"><div class="box" style="background:#6B9B7E;border-color:#6B9B7E"></div><span class="done">开会</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-vs after">
+            <h4><span class="dot"></span>after</h4>
+            <div class="stage" style="padding:14px;flex-direction:column;justify-content:flex-start;align-items:stretch">
+              <div class="plan-list" id="plan-list">
+                <div class="plan-item"><div class="ck"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 8 7 12 13 4"/></svg></div><span class="label">写日报</span><span class="time">14:00</span></div>
+                <div class="plan-item done"><div class="ck"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 8 7 12 13 4"/></svg></div><span class="label">代码 review</span><span class="time">10:30</span></div>
+                <div class="plan-item"><div class="ck"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 8 7 12 13 4"/></svg></div><span class="label">和产品对齐</span><span class="time">16:00</span></div>
+              </div>
+              <div class="plan-controls">
+                <button class="plan-ctrl" id="plan-add">+ 新增</button>
+                <button class="plan-ctrl" id="plan-check">勾选第二项</button>
+                <button class="plan-ctrl" id="plan-remove">删一条</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mod-foot">stagger 60ms · 勾选 box 变色 + 文字 line-through · 颜色随 success 转绿 · 删除滑出 + 高度塌缩</div>
+    </section>
+
+    <!-- 3 Count-up -->
+    <section class="mod col-4 reveal" data-r>
+      <div class="mod-num">03 / 09</div>
+      <h3 class="mod-title">数字 count-up</h3>
+      <p class="mod-sub">数字从 0 增长，不是直接出现。配合 0.5s 缓动。</p>
+      <div class="mod-stage">
+        <div class="row-vs">
+          <div class="col-vs before">
+            <h4><span class="dot"></span>before</h4>
+            <div class="stage">
+              <span class="count-old">4.2h</span>
+            </div>
+          </div>
+          <div class="col-vs after">
+            <h4><span class="dot"></span>after</h4>
+            <div class="stage">
+              <div class="count-stage">
+                <span class="count-num" id="count-num">0.0<span class="u">h</span></span>
+                <span class="count-delta up" id="count-delta">+0.8h</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mod-foot">requestAnimationFrame · 800ms · ease-out cubic · tabular-nums 等宽数字</div>
+    </section>
+
+    <!-- 4 Skeleton -->
+    <section class="mod col-4 reveal" data-r>
+      <div class="mod-num">04 / 09</div>
+      <h3 class="mod-title">Skeleton loading</h3>
+      <p class="mod-sub">shimmer 扫光占位，比转圈更优雅。</p>
+      <div class="mod-stage">
+        <div class="row-vs">
+          <div class="col-vs before">
+            <h4><span class="dot"></span>before</h4>
+            <div class="stage">
+              <div class="skel-static w70" style="height:10px;margin-bottom:6px"></div>
+              <div class="skel-static w90" style="height:10px;margin-bottom:6px"></div>
+              <div class="skel-static w40" style="height:10px"></div>
+            </div>
+          </div>
+          <div class="col-vs after">
+            <h4><span class="dot"></span>after</h4>
+            <div class="stage">
+              <div class="skel-card">
+                <div class="skel h24"></div>
+                <div class="skel w90"></div>
+                <div class="skel w70"></div>
+                <div class="skel w90"></div>
+                <div class="skel w40"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mod-foot">linear-gradient 200% · 1.6s 循环 · 形状匹配最终 layout</div>
+    </section>
+
+    <!-- 5 REC -->
+    <section class="mod col-4 reveal" data-r>
+      <div class="mod-num">05 / 09</div>
+      <h3 class="mod-title">录制状态切换</h3>
+      <p class="mod-sub">不是颜色变一下，是带物理的 spring 过渡。</p>
+      <div class="mod-stage">
+        <div class="row-vs">
+          <div class="col-vs before">
+            <h4><span class="dot"></span>before</h4>
+            <div class="stage">
+              <span class="rec-old">● REC 1:23</span>
+            </div>
+          </div>
+          <div class="col-vs after">
+            <h4><span class="dot"></span>after</h4>
+            <div class="stage" style="flex-direction:column;gap:12px">
+              <div class="rec-pill" id="rec-pill">
+                <span class="dot"></span>
+                <span class="label">已暂停</span>
+                <span class="timer mono">00:00</span>
+              </div>
+              <button class="rec-toggle" id="rec-toggle">切换状态</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mod-foot">spring .35s · pulse 阴影扩散 · 文字 fade in/out · 颜色环环相扣</div>
+    </section>
+
+    <!-- 6 Theme -->
+    <section class="mod col-6 reveal" data-r>
+      <div class="mod-num">06 / 09</div>
+      <h3 class="mod-title">主题切换过渡</h3>
+      <p class="mod-sub">不是硬切，所有色块平滑迁移到新主题。</p>
+      <div class="mod-stage">
+        <div class="row-vs">
+          <div class="col-vs before">
+            <h4><span class="dot"></span>before</h4>
+            <div class="stage" style="flex-direction:column;gap:8px">
+              <button class="btn-old" style="width:120px">浅色</button>
+              <button class="btn-old" style="width:120px;background:#3D3A33;color:#fff">深色</button>
+            </div>
+          </div>
+          <div class="col-vs after">
+            <h4><span class="dot"></span>after</h4>
+            <div class="stage" style="flex-direction:column;gap:10px">
+              <div class="theme-stage" id="theme-cards">
+                <div class="theme-card light">
+                  <div class="bar full"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar short"></div>
+                </div>
+                <div class="theme-card dark">
+                  <div class="bar full"></div>
+                  <div class="bar accent"></div>
+                  <div class="bar short"></div>
+                </div>
+              </div>
+              <div class="theme-switcher">
+                <button class="theme-btn active" data-theme="light">浅色</button>
+                <button class="theme-btn" data-theme="dark">深色</button>
+                <button class="theme-btn" data-theme="auto">自动</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mod-foot">所有 transition .55s spring · 背景、bar、icon 一起迁移 · 不闪屏</div>
+    </section>
+
+    <!-- 7 Card hover -->
+    <section class="mod col-6 reveal" data-r>
+      <div class="mod-num">07 / 09</div>
+      <h3 class="mod-title">Card hover 微动效</h3>
+      <p class="mod-sub">鼠标移上去，icon 旋转、顶部光带扫过、阴影扩散。</p>
+      <div class="mod-stage">
+        <div class="row-vs">
+          <div class="col-vs before">
+            <h4><span class="dot"></span>before</h4>
+            <div class="stage" style="flex-direction:column;gap:6px;align-items:stretch">
+              <div class="hover-old">今日报告</div>
+              <div class="hover-old">本周数据</div>
+              <div class="hover-old">应用使用</div>
+            </div>
+          </div>
+          <div class="col-vs after">
+            <h4><span class="dot"></span>after</h4>
+            <div class="stage" style="padding:14px;align-items:stretch;justify-content:flex-start">
+              <div class="card-row">
+                <div class="hover-card">
+                  <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+                  <div class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                  <h5>今日报告</h5>
+                  <p>4 篇</p>
+                </div>
+                <div class="hover-card">
+                  <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+                  <div class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
+                  <h5>本周数据</h5>
+                  <p>32h</p>
+                </div>
+                <div class="hover-card">
+                  <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+                  <div class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg></div>
+                  <h5>应用使用</h5>
+                  <p>5 个</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mod-foot">translateY -3px · 阴影 12px 28px · 顶部光带 scaleX 0→1 · icon 旋转 -6° + 变色 · 箭头右滑入</div>
+    </section>
+
+    <!-- 8 Cmd palette -->
+    <section class="mod col-6 reveal" data-r>
+      <div class="mod-num">08 / 09</div>
+      <h3 class="mod-title">⌘K command palette</h3>
+      <p class="mod-sub">按 ⌘K 唤出，背后模糊、面板 scale in、列表 stagger 滑入。</p>
+      <div class="mod-stage" style="padding:0;overflow:hidden">
+        <div class="cmd-stage" id="cmd-stage">
+          <div class="cmd-trigger" id="cmd-trigger">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span>搜索命令</span>
+            <kbd>⌘K</kbd>
+          </div>
+          <div class="cmd-overlay" id="cmd-overlay">
+            <div class="cmd-panel">
+              <div class="cmd-input">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input placeholder="输入命令、模板、应用名..." id="cmd-input" />
+                <span class="esc">esc</span>
+              </div>
+              <div class="cmd-list">
+                <div class="cmd-item active">
+                  <div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg></div>
+                  <span class="text">新建日报<span class="desc">从模板生成今日报告</span></span>
+                  <span class="kbd">↵</span>
+                </div>
+                <div class="cmd-item">
+                  <div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg></div>
+                  <span class="text">查看时间线<span class="desc">今天的工作记录</span></span>
+                  <span class="kbd">⌘T</span>
+                </div>
+                <div class="cmd-item">
+                  <div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg></div>
+                  <span class="text">导出本周报告<span class="desc">PDF / Markdown</span></span>
+                  <span class="kbd">⌘E</span>
+                </div>
+                <div class="cmd-item">
+                  <div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+                  <span class="text">设置<span class="desc">API、主题、隐私</span></span>
+                  <span class="kbd">⌘,</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="cmd-hint">点击触发器或按 ⌘K</div>
+        </div>
+      </div>
+      <div class="mod-foot">backdrop blur 4px · panel scale .97→1 · 列表 40ms 间隔 · 键盘导航</div>
+    </section>
+
+    <!-- 9 Empty state -->
+    <section class="mod col-6 reveal" data-r>
+      <div class="mod-num">09 / 09</div>
+      <h3 class="mod-title">Empty state</h3>
+      <p class="mod-sub">空状态也是页面，告诉用户下一步做什么。</p>
+      <div class="mod-stage">
+        <div class="row-vs">
+          <div class="col-vs before">
+            <h4><span class="dot"></span>before</h4>
+            <div class="stage">
+              <div class="empty-old">
+                <div class="ic">?</div>
+                <p>暂无数据</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-vs after">
+            <h4><span class="dot"></span>after</h4>
+            <div class="stage">
+              <div class="empty-stage">
+                <div class="empty-illu">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                </div>
+                <h5>还没有日报</h5>
+                <p>录制你的工作或选择模板，AI 会自动整理每日工作内容。</p>
+                <a href="#" class="empty-cta" onclick="event.preventDefault()">开始今日记录</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mod-foot">品牌主色 + 薄荷点缀 · 浮动呼吸 · 引导 CTA · 有动作可点</div>
+    </section>
+
+  </div>
+
+  <div class="sec-h">
+    <h2 class="display">下一步</h2>
+    <span class="line"></span>
+    <span class="sub">apply to project</span>
+  </div>
+
+  <p style="font-size:13px;color:var(--text-2);max-width:640px;line-height:1.6">
+    这九组 demo 确认手感后，可以直接落到牙牙乐的真实项目里。第 1 轮：换 token、换字体、改造 Today / Reports 主页 4 个 section。第 2 轮：把命令面板、count-up、骨架加到所有 view。中间不需要你测试，code-change-only。
+  </p>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Reveal on scroll
+  var reveals = document.querySelectorAll('[data-r]');
+  if ('IntersectionObserver' in window && !reduce) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e, i){
+        if (e.isIntersecting) {
+          setTimeout(function(){ e.target.classList.add('in'); }, i * 80);
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    reveals.forEach(function(r){ io.observe(r); });
+  } else {
+    reveals.forEach(function(r){ r.classList.add('in'); });
+  }
+
+  // Module 1: 按钮状态机
+  var btn = document.getElementById('btn-1');
+  if (btn) {
+    btn.addEventListener('click', function(){
+      if (btn.classList.contains('loading') || btn.classList.contains('success')) return;
+      btn.classList.add('loading');
+      setTimeout(function(){
+        btn.classList.remove('loading');
+        btn.classList.add('success');
+        var txt = btn.firstElementChild && btn.firstElementChild.nodeType === 3 ? btn.childNodes[0] : null;
+        if (btn.dataset.orig === undefined) btn.dataset.orig = btn.textContent;
+        btn.innerHTML = '<span>已保存</span>';
+        setTimeout(function(){
+          btn.classList.remove('success');
+          btn.innerHTML = '<span class="shine"></span>保存日报';
+        }, 1600);
+      }, 1100);
+    });
+  }
+
+  // Module 2: Plan 列表
+  var planList = document.getElementById('plan-list');
+  var addBtn = document.getElementById('plan-add');
+  var checkBtn = document.getElementById('plan-check');
+  var removeBtn = document.getElementById('plan-remove');
+  if (planList) {
+    function addItem(){
+      var labels = ['整理笔记', '回复邮件', '修复 bug', '更新文档', '周会准备', '代码重构'];
+      var times = ['09:00','10:30','11:45','13:20','15:00','16:30'];
+      var i = Math.floor(Math.random() * labels.length);
+      var item = document.createElement('div');
+      item.className = 'plan-item entering';
+      item.innerHTML = '<div class="ck"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 8 7 12 13 4"/></svg></div><span class="label">' + labels[i] + '</span><span class="time">' + times[i] + '</span>';
+      planList.insertBefore(item, planList.firstChild);
+    }
+    function checkItem(){
+      var items = planList.querySelectorAll('.plan-item:not(.done):not(.removing)');
+      if (items.length === 0) return;
+      var item = items[0];
+      item.classList.add('pop');
+      setTimeout(function(){
+        item.classList.add('done');
+        item.classList.remove('pop');
+      }, 200);
+    }
+    function removeItem(){
+      var items = planList.querySelectorAll('.plan-item:not(.removing)');
+      if (items.length === 0) return;
+      var item = items[items.length - 1];
+      item.classList.add('removing');
+      setTimeout(function(){ if (item.parentNode) item.parentNode.removeChild(item); }, 380);
+    }
+    addBtn && addBtn.addEventListener('click', addItem);
+    checkBtn && checkBtn.addEventListener('click', checkItem);
+    removeBtn && removeBtn.addEventListener('click', removeItem);
+  }
+
+  // Module 3: count-up
+  var countEl = document.getElementById('count-num');
+  var deltaEl = document.getElementById('count-delta');
+  if (countEl) {
+    function startCount(){
+      var target = 4.2, current = 0, start = null, dur = 900;
+      function step(ts){
+        if (!start) start = ts;
+        var p = Math.min((ts - start) / dur, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        current = target * eased;
+        countEl.innerHTML = current.toFixed(1) + '<span class="u">h</span>';
+        if (p < 1) requestAnimationFrame(step);
+        else countEl.innerHTML = target.toFixed(1) + '<span class="u">h</span>';
+      }
+      requestAnimationFrame(step);
+    }
+    var countIo = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) { startCount(); countIo.unobserve(e.target); }
+      });
+    }, { threshold: 0.4 });
+    countIo.observe(countEl);
+  }
+
+  // Module 5: REC toggle
+  var recPill = document.getElementById('rec-pill');
+  var recToggle = document.getElementById('rec-toggle');
+  var recOn = false, recSec = 0, recTimer = null;
+  function fmtTime(s){
+    var m = Math.floor(s / 60), sec = s % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
+  if (recPill && recToggle) {
+    recToggle.addEventListener('click', function(){
+      recOn = !recOn;
+      if (recOn) {
+        recPill.classList.add('live');
+        recPill.querySelector('.label').textContent = '录制中';
+        recTimer = setInterval(function(){
+          recSec++;
+          recPill.querySelector('.timer').textContent = fmtTime(recSec);
+        }, 1000);
+      } else {
+        recPill.classList.remove('live');
+        recPill.querySelector('.label').textContent = '已暂停';
+        if (recTimer) clearInterval(recTimer);
+      }
+    });
+  }
+
+  // Module 6: 主题切换
+  var themeBtns = document.querySelectorAll('[data-theme]');
+  themeBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      themeBtns.forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+    });
+  });
+
+  // Module 8: Command palette
+  var cmdTrigger = document.getElementById('cmd-trigger');
+  var cmdOverlay = document.getElementById('cmd-overlay');
+  var cmdInput = document.getElementById('cmd-input');
+  function openCmd(){
+    cmdOverlay.classList.add('open');
+    setTimeout(function(){ cmdInput && cmdInput.focus(); }, 100);
+  }
+  function closeCmd(){ cmdOverlay.classList.remove('open'); }
+  cmdTrigger && cmdTrigger.addEventListener('click', openCmd);
+  cmdOverlay && cmdOverlay.addEventListener('click', function(e){
+    if (e.target === cmdOverlay) closeCmd();
+  });
+  document.addEventListener('keydown', function(e){
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      cmdOverlay.classList.contains('open') ? closeCmd() : openCmd();
+    }
+    if (e.key === 'Escape' && cmdOverlay.classList.contains('open')) closeCmd();
+  });
+
+  // Cmd list keyboard nav
+  if (cmdInput) {
+    cmdInput.addEventListener('keydown', function(e){
+      var items = cmdOverlay.querySelectorAll('.cmd-item');
+      var active = cmdOverlay.querySelector('.cmd-item.active');
+      var idx = Array.prototype.indexOf.call(items, active);
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        items.forEach(function(x){ x.classList.remove('active'); });
+        items[(idx + 1) % items.length].classList.add('active');
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        items.forEach(function(x){ x.classList.remove('active'); });
+        items[(idx - 1 + items.length) % items.length].classList.add('active');
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        var a = cmdOverlay.querySelector('.cmd-item.active');
+        if (a) a.style.transform = 'scale(0.98)';
+        setTimeout(closeCmd, 150);
+      }
+    });
+  }
+
+})();
+</script>
+
+</body>
+</html>

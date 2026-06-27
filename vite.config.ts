@@ -1,45 +1,26 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import electron from 'vite-plugin-electron'
-import renderer from 'vite-plugin-electron-renderer'
+import { quasar, transformAssetUrls } from '@quasar/vite-plugin'
 import path from 'node:path'
+import { fileURLToPath, URL } from 'node:url'
 
-export default defineConfig({
-  plugins: [
-    vue(),
-    electron([
-      {
-        entry: 'electron/main.ts',
-        vite: {
-          build: {
-            outDir: 'dist-electron',
-            rollupOptions: {
-              external: ['better-sqlite3', 'electron']
-            }
-          }
-        }
-      },
-      {
-        entry: 'electron/preload.ts',
-        onstart({ reload }) {
-          reload()
-        },
-        vite: {
-          build: {
-            outDir: 'dist-electron'
-          }
-        }
+export default defineConfig(() => {
+  return {
+    plugins: [
+      vue({ template: { transformAssetUrls } }),
+      quasar({
+        sassVariables: fileURLToPath(new URL('./src/quasar-variables.sass', import.meta.url))
+      })
+    ],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src')
       }
-    ]),
-    renderer()
-  ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'src')
+    },
+    base: './',
+    build: {
+      outDir: 'dist',
+      chunkSizeWarningLimit: 1500
     }
-  },
-  base: './',
-  server: {
-    port: 5173
   }
 })

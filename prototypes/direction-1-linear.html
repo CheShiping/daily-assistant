@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>方向 1 · Linear 极简克制</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+  :root {
+    --bg: #FBFBFA;
+    --surface: #FFFFFF;
+    --surface-2: #F4F4F2;
+    --border: #ECECEA;
+    --text: #0A0A0A;
+    --text-2: #56564F;
+    --text-3: #8A8A82;
+    --accent: #5E6AD2;
+    --accent-2: #4A55B5;
+    --warn: #D97706;
+    --good: #16A34A;
+    --radius: 8px;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter Tight',-apple-system,BlinkMacSystemFont,sans-serif;font-feature-settings:'cv11','ss01';-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-feature-settings:'zero','ss02'}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+
+  .app{display:grid;grid-template-columns:220px 1fr;height:100vh}
+
+  /* Sidebar */
+  .side{background:var(--surface);border-right:1px solid var(--border);padding:14px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
+  .brand{display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:14px}
+  .brand .mark{width:22px;height:22px;border-radius:6px;background:var(--text);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:11px}
+  .brand .name{font-weight:600;font-size:13px;letter-spacing:-0.01em}
+  .side-group-label{font-size:10.5px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;padding:14px 8px 6px}
+  .nav-item{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:6px;color:var(--text-2);font-size:13px;font-weight:500;transition:background .12s ease,color .12s ease}
+  .nav-item:hover{background:var(--surface-2);color:var(--text)}
+  .nav-item.active{background:var(--surface-2);color:var(--text)}
+  .nav-item.active .dot{background:var(--accent)}
+  .nav-item .dot{width:6px;height:6px;border-radius:50%;background:transparent}
+  .nav-item svg{width:15px;height:15px;flex:none;stroke-width:1.6}
+  .side-foot{margin-top:auto;padding:10px 8px;font-size:11px;color:var(--text-3);display:flex;justify-content:space-between;align-items:center}
+
+  /* Main */
+  .main{overflow-y:auto;padding:32px 40px 80px;max-width:920px;margin:0 auto;width:100%}
+  .page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:32px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+  .page-head h1{font-size:28px;font-weight:600;letter-spacing:-0.025em;line-height:1.1;margin:0}
+  .page-head .sub{margin-top:6px;color:var(--text-2);font-size:13.5px;max-width:520px}
+  .head-actions{display:flex;align-items:center;gap:8px}
+
+  /* Status pill */
+  .status-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--surface-2);color:var(--text-2);font-size:11.5px;font-weight:500;border:1px solid var(--border);transition:all .15s}
+  .status-pill .pulse{width:6px;height:6px;border-radius:50%;background:var(--text-3)}
+  .status-pill.live{color:var(--good);border-color:rgba(22,163,74,.25);background:rgba(22,163,74,.06)}
+  .status-pill.live .pulse{background:var(--good);box-shadow:0 0 0 0 rgba(22,163,74,.45);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.45)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+
+  /* Section */
+  section{margin-top:36px}
+  .sec-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+  .sec-head h2{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.08em;margin:0}
+  .sec-head .count{color:var(--text-3);font-weight:500;font-size:11px}
+  .sec-head .meta{margin-left:auto;font-size:11.5px;color:var(--text-3);font-weight:500}
+
+  /* Card */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+  .card.flush{padding:0;overflow:hidden}
+
+  /* Hero */
+  .hero{display:grid;grid-template-columns:1fr auto;gap:32px;align-items:start;padding:28px 28px 26px;background:var(--surface);border:1px solid var(--border);border-radius:14px;position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 0% 0%,rgba(94,106,210,.07),transparent 50%);pointer-events:none}
+  .hero h2{font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:1.25;margin:0 0 8px}
+  .hero p{margin:0;color:var(--text-2);font-size:13px;max-width:480px;line-height:1.55}
+  .hero .pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:6px;background:var(--surface-2);color:var(--text-2);font-size:11px;font-weight:500;border:1px solid var(--border)}
+  .pill svg{width:11px;height:11px;stroke-width:2;color:var(--good)}
+  .hero .actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;position:relative;z-index:1}
+  .hero .date{font-size:11px;color:var(--text-3);font-weight:500}
+
+  /* Buttons */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 12px;border-radius:6px;font-size:12.5px;font-weight:500;transition:all .12s ease;border:1px solid transparent;white-space:nowrap}
+  .btn svg{width:13px;height:13px;stroke-width:1.8}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:var(--accent-2)}
+  .btn-ghost{color:var(--text-2);background:transparent}
+  .btn-ghost:hover{background:var(--surface-2);color:var(--text)}
+  .btn-outline{background:transparent;border-color:var(--border);color:var(--text)}
+  .btn-outline:hover{background:var(--surface-2)}
+
+  /* Plan list */
+  .plan-input{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:var(--surface-2);border-bottom-left-radius:12px;border-bottom-right-radius:12px;margin-top:-1px}
+  .plan-input input{flex:1;background:transparent;border:0;outline:0;font-size:13px;color:var(--text);padding:0}
+  .plan-input input::placeholder{color:var(--text-3)}
+  .plan-input .ph-icon{color:var(--text-3);width:14px;height:14px;stroke-width:1.6}
+
+  .plan-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);transition:background .12s;cursor:pointer}
+  .plan-row:last-child{border-bottom:0}
+  .plan-row:hover{background:var(--surface-2)}
+  .plan-row:hover .grip{opacity:1}
+  .check{width:16px;height:16px;border:1.5px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;transition:all .12s;flex:none;background:var(--surface)}
+  .check.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .check svg{width:11px;height:11px;stroke-width:3;opacity:0;transition:opacity .12s}
+  .check.on svg{opacity:1}
+  .plan-text{flex:1;font-size:13px;color:var(--text);line-height:1.4}
+  .plan-text.done{color:var(--text-3);text-decoration:line-through;text-decoration-color:var(--text-3)}
+  .grip{color:var(--text-3);opacity:0;transition:opacity .12s;width:14px;height:14px;cursor:grab;flex:none}
+
+  /* Stat block */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:0}
+  .stat{padding:20px 22px;border-right:1px solid var(--border)}
+  .stat:last-child{border-right:0}
+  .stat .v{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:500;letter-spacing:-0.02em;color:var(--text);line-height:1;margin-bottom:6px}
+  .stat .k{font-size:11px;color:var(--text-3);font-weight:500;text-transform:uppercase;letter-spacing:0.06em}
+
+  /* Recent rows */
+  .rec-row{display:grid;grid-template-columns:48px 80px 1fr;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--border);font-size:13px}
+  .rec-row:first-child{border-top:0}
+  .rec-row .t{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text-3);font-weight:500}
+  .rec-row .tag{display:inline-flex;align-items:center;padding:2px 7px;background:var(--surface-2);border-radius:4px;font-size:11px;font-weight:500;color:var(--text-2);width:max-content}
+  .rec-row .s{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* Hourly bars */
+  .bars-wrap{padding:18px 20px 14px}
+  .bars{display:flex;align-items:flex-end;gap:2px;height:64px;margin-bottom:10px}
+  .bar{flex:1;background:var(--surface-2);border-radius:2px;position:relative;transition:background .15s;min-height:2px;cursor:pointer}
+  .bar:hover{background:var(--accent)}
+  .bar.today{background:var(--accent)}
+  .bar.peak{background:var(--accent);box-shadow:0 0 0 1px rgba(94,106,210,.18)}
+  .axis{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-3);font-weight:500}
+  .legend{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:11px;color:var(--text-3)}
+  .legend .sw{display:flex;gap:1px;align-items:flex-end;height:12px}
+  .legend .sw span{width:8px;background:var(--surface-2);border-radius:1px}
+  .legend .sw span:nth-child(2){opacity:.5}
+  .legend .sw span:nth-child(3){opacity:.7}
+  .legend .sw span:nth-child(4){background:var(--accent)}
+
+  /* Displays */
+  .disp{display:flex;align-items:center;gap:14px;padding:14px 18px;border:1px solid var(--border);border-radius:10px;background:var(--surface);margin-bottom:8px}
+  .disp:last-child{margin-bottom:0}
+  .disp .ic{width:36px;height:36px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--text-2);flex:none}
+  .disp .ic svg{width:16px;height:16px;stroke-width:1.6}
+  .disp .body{flex:1;min-width:0}
+  .disp .name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .disp .name .badge{font-size:10px;padding:1px 6px;background:rgba(94,106,210,.1);color:var(--accent);border-radius:4px;font-weight:500}
+  .disp .meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3);margin-top:2px}
+
+  /* Input */
+  input[type=text],input[type=date]{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12.5px;color:var(--text);outline:none;transition:border .12s}
+  input[type=text]:focus,input[type=date]:focus{border-color:var(--accent)}
+
+  /* Switch */
+  .switch{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-2);cursor:pointer;user-select:none;font-weight:500}
+  .switch input{appearance:none;width:26px;height:14px;background:var(--border);border-radius:999px;position:relative;transition:background .15s;cursor:pointer}
+  .switch input::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;background:#fff;border-radius:50%;transition:left .15s}
+  .switch input:checked{background:var(--accent)}
+  .switch input:checked::after{left:14px}
+
+  .row{display:flex;align-items:center;gap:8px}
+  .spacer{flex:1}
+  .label-row{font-size:10.5px;color:var(--text-3);font-weight:500;text-transform:uppercase;letter-spacing:0.08em}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="side">
+    <div class="brand">
+      <div class="mark">日</div>
+      <div class="name">牙牙乐</div>
+    </div>
+
+    <div class="side-group-label">工作</div>
+    <a class="nav-item active" href="#">
+      <span class="dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      今日工作
+    </a>
+    <a class="nav-item" href="#">
+      <span class="dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path></svg>
+      生成报告
+    </a>
+    <a class="nav-item" href="#">
+      <span class="dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      工作时间线
+    </a>
+    <a class="nav-item" href="#">
+      <span class="dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
+      时段热力图
+    </a>
+    <a class="nav-item" href="#">
+      <span class="dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+      应用记录
+    </a>
+    <a class="nav-item" href="#">
+      <span class="dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>
+      历史报告
+    </a>
+    <a class="nav-item" href="#">
+      <span class="dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
+      接入 Agent
+    </a>
+
+    <div class="side-group-label">其他</div>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+      订阅
+    </a>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"></path><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>
+      邀请有礼
+    </a>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+      隐私保护
+    </a>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      设置
+    </a>
+
+    <div class="side-foot">
+      <span>v2.0.0</span>
+      <span>开源</span>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>今日工作</h1>
+        <p class="sub">2026 年 6 月 27 日 · 星期五</p>
+      </div>
+      <div class="head-actions">
+        <span class="status-pill live"><span class="pulse"></span> 记录中</span>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero">
+      <div style="position:relative;z-index:1">
+        <h2>你只管工作，日报交给我</h2>
+        <p>静默记录工作轨迹，AI 帮你写好每一份日报、周报、月报。不再为写汇报发愁。</p>
+        <div class="pills">
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 截图分析后即销毁</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 数据仅存本地</span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 内容脱敏处理</span>
+        </div>
+      </div>
+      <div class="actions">
+        <div class="date mono">Fri · Jun 27</div>
+        <button class="btn btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> 快速记录</button>
+      </div>
+    </div>
+
+    <!-- Plans -->
+    <section>
+      <div class="sec-head">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" style="color:var(--text-3)"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        <h2>今日计划</h2>
+        <span class="count">2 / 3 已完成</span>
+        <span class="meta">拖拽排序</span>
+      </div>
+      <div class="card flush">
+        <div class="plan-row">
+          <div class="grip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle><circle cx="15" cy="6" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="18" r="1"></circle></svg></div>
+          <div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+          <div class="plan-text done">整理日报助手需求文档 V2.1</div>
+        </div>
+        <div class="plan-row">
+          <div class="grip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle><circle cx="15" cy="6" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="18" r="1"></circle></svg></div>
+          <div class="check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+          <div class="plan-text done">和后端同事对齐 API 接口字段</div>
+        </div>
+        <div class="plan-row">
+          <div class="grip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle><circle cx="15" cy="6" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="18" r="1"></circle></svg></div>
+          <div class="check"></div>
+          <div class="plan-text">完成模板编辑器交互</div>
+        </div>
+        <div class="plan-input">
+          <svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <input type="text" placeholder="添加新计划，回车提交" />
+          <span class="mono" style="font-size:10.5px;color:var(--text-3)">⏎</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Work overview -->
+    <section>
+      <div class="sec-head">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" style="color:var(--text-3)"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        <h2>工作概览</h2>
+        <span class="meta">查看全部 →</span>
+      </div>
+      <div class="card flush">
+        <div class="stats">
+          <div class="stat"><div class="v">12</div><div class="k">记录条数</div></div>
+          <div class="stat"><div class="v">4.2<span style="font-size:14px;color:var(--text-3);margin-left:2px">h</span></div><div class="k">专注时长</div></div>
+          <div class="stat"><div class="v" style="font-family:'Inter Tight',sans-serif">开发</div><div class="k">主要工作</div></div>
+        </div>
+        <div style="padding:6px 22px 18px">
+          <div class="rec-row">
+            <span class="t">14:32</span>
+            <span class="tag">开发</span>
+            <span class="s">在 Vue 3 中实现流式报告 Markdown 渲染组件</span>
+          </div>
+          <div class="rec-row">
+            <span class="t">13:15</span>
+            <span class="tag">沟通</span>
+            <span class="s">和后端同步 OpenAI-compatible 端点的鉴权方式</span>
+          </div>
+          <div class="rec-row">
+            <span class="t">11:48</span>
+            <span class="tag">开发</span>
+            <span class="s">修复 Tailwind HSL 变量在暗色模式下的对比问题</span>
+          </div>
+          <div class="rec-row">
+            <span class="t">10:20</span>
+            <span class="tag">设计</span>
+            <span class="s">梳理 Settings 页面信息架构，准备做减法</span>
+          </div>
+          <div class="rec-row">
+            <span class="t">09:05</span>
+            <span class="tag">规划</span>
+            <span class="s">写下今天的三件硬指标，全部完成才算合格</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Hourly bars -->
+    <section>
+      <div class="sec-head">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" style="color:var(--text-3)"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <h2>时段记录</h2>
+        <label class="switch" style="margin-left:auto">
+          <input type="checkbox" /> 展示前两日
+        </label>
+      </div>
+      <div class="card">
+        <div class="bars-wrap" style="padding:0">
+          <div class="bars">
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:30%"></div>
+            <div class="bar today" style="height:80%"></div>
+            <div class="bar today peak" style="height:100%"></div>
+            <div class="bar today" style="height:70%"></div>
+            <div class="bar today" style="height:55%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar today" style="height:40%"></div>
+            <div class="bar today" style="height:50%"></div>
+            <div class="bar today" style="height:35%"></div>
+            <div class="bar today" style="height:20%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:8%"></div>
+            <div class="bar" style="height:8%"></div>
+          </div>
+          <div class="axis">
+            <span>00</span><span>06</span><span>12</span><span>18</span><span>23</span>
+          </div>
+          <div class="legend">
+            <span>活跃度</span>
+            <div class="sw">
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <span class="spacer"></span>
+            <span class="mono">peak 11:00 · 4 条</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Displays -->
+    <section>
+      <div class="sec-head">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" style="color:var(--text-3)"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        <h2>已连接显示器</h2>
+        <span class="count">2 台</span>
+      </div>
+      <div class="disp">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+        <div class="body">
+          <div class="name">DELL U2723QE <span class="badge">主显示器</span></div>
+          <div class="meta">3840 × 2160 · 1.5x · 0, 0</div>
+        </div>
+      </div>
+      <div class="disp">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+        <div class="body">
+          <div class="name">Built-in Display</div>
+          <div class="meta">2880 × 1800 · 2.0x · 3840, 540</div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>
