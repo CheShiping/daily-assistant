@@ -1,0 +1,7 @@
+node_modules
+/.vscode/
+/dist/
+/release-v130/
+*.log
+.env*
+/build/
