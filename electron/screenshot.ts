@@ -1,11 +1,16 @@
 // 截图服务 - desktopCapturer 定时截图 + 视觉识别
+<<<<<<< HEAD
 import { desktopCapturer, screen, app, BrowserWindow, Notification } from 'electron'
+=======
+import { desktopCapturer, screen, app } from 'electron'
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 import path from 'node:path'
 import fs from 'node:fs'
 import { createScreenshot, updateScreenshot, createWorkRecord } from './db'
 import { getSettings } from './settings'
 import { analyzeScreenshot } from './ai'
 
+<<<<<<< HEAD
 const SENSITIVE_KEYWORDS = [
   '私人沟通', '社交媒体', '浏览社交媒体',
   '当前包含私人沟通', '桌面空闲', '查看桌面'
@@ -27,6 +32,8 @@ function showNotification(title: string, body: string) {
   setTimeout(() => n.close(), 3000)
 }
 
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 let timer: NodeJS.Timeout | null = null
 let isRunning = false
 let isCapturing = false // 并发锁：防止上一次截图未完成时下一次重叠
@@ -111,6 +118,7 @@ export async function captureNow(): Promise<{ ok: boolean; summary?: string; cat
       const result = await analyzeScreenshot(base64, settings.memoryContent)
       console.log('[screenshot] 识别结果:', result.category, '|', result.summary.slice(0, 80))
       updateScreenshot(id, { analysis: result.summary, appName: result.category, analyzed: true })
+<<<<<<< HEAD
       
       // 敏感场景跳过
       if (settings.sensitiveSceneSkip && isSensitive(result.category, result.summary)) {
@@ -124,12 +132,15 @@ export async function captureNow(): Promise<{ ok: boolean; summary?: string; cat
       }
 
       // 创建 workRecord（source: 'manual'）
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
       const endedAt = new Date(Date.now() + settings.screenshotIntervalSec * 1000).toISOString()
       createWorkRecord({
         startedAt: takenAt,
         endedAt,
         summary: result.summary,
         category: result.category,
+<<<<<<< HEAD
         source: 'manual',
         screenshotPath: settings.autoDeleteScreenshots ? undefined : filePath
       })
@@ -143,6 +154,11 @@ export async function captureNow(): Promise<{ ok: boolean; summary?: string; cat
       // 系统通知
       showNotification('✅ 快速记录', `${result.category} · ${result.summary.slice(0, 20)}`)
 
+=======
+        source: 'auto',
+        screenshotPath: filePath
+      })
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
       return { ok: true, summary: result.summary, category: result.category }
     }
     console.warn('[screenshot] 视觉识别未启用或无 base64 数据')
@@ -196,6 +212,7 @@ async function captureAndAnalyze() {
       console.log('[screenshot:auto] 识别结果:', result.category, '|', result.summary.slice(0, 80))
       updateScreenshot(id, { analysis: result.summary, appName: result.category, analyzed: true })
 
+<<<<<<< HEAD
       // 敏感场景跳过
       if (settings.sensitiveSceneSkip && isSensitive(result.category, result.summary)) {
         console.log('[screenshot:auto] 检测到敏感场景，跳过记录')
@@ -208,6 +225,8 @@ async function captureAndAnalyze() {
       }
 
       // 创建 workRecord（source: 'auto'）
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
       const endedAt = new Date(Date.now() + settings.screenshotIntervalSec * 1000).toISOString()
       createWorkRecord({
         startedAt: takenAt,
@@ -215,6 +234,7 @@ async function captureAndAnalyze() {
         summary: result.summary,
         category: result.category,
         source: 'auto',
+<<<<<<< HEAD
         screenshotPath: settings.autoDeleteScreenshots ? undefined : filePath
       })
 
@@ -227,6 +247,10 @@ async function captureAndAnalyze() {
 
       // 系统通知
       showNotification('✅ 已记录', `${result.category} · ${result.summary.slice(0, 20)}`)
+=======
+        screenshotPath: filePath
+      })
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
     }
   } catch (e) {
     console.error('[screenshot:auto] 截图失败:', e)

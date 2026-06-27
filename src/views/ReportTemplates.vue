@@ -17,6 +17,7 @@ const generating = ref(false)
 const genContent = ref('')
 let unsubStream: (() => void) | null = null
 let unsubStatus: (() => void) | null = null
+<<<<<<< HEAD
 const errorMessage = ref('')
 
 function showError(msg: string) {
@@ -27,6 +28,8 @@ function showError(msg: string) {
     }
   }, 3000)
 }
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 
 const typeLabels = { daily: '日报', weekly: '周报', monthly: '月报' }
 
@@ -82,7 +85,11 @@ async function remove(id: string) {
     await window.api.reportTemplates.delete(id)
     await load()
   } catch (e) {
+<<<<<<< HEAD
     showError((e as Error).message)
+=======
+    alert((e as Error).message)
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   }
 }
 
@@ -108,7 +115,11 @@ async function generate() {
     if (data.status === 'completed') {
       genContent.value = data.content
     } else if (data.status === 'failed') {
+<<<<<<< HEAD
       showError('生成失败：' + (data.error ?? '未知错误'))
+=======
+      alert('生成失败：' + (data.error ?? '未知错误'))
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
     }
   })
 }
@@ -133,11 +144,14 @@ onUnmounted(() => {
 
 <template>
   <div class="p-6 max-w-5xl mx-auto">
+<<<<<<< HEAD
     <!-- 错误提示 -->
     <div v-if="errorMessage" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground px-4 py-2 rounded-md shadow-lg text-sm flex items-center gap-2 transition-all">
       <span>{{ errorMessage }}</span>
     </div>
 
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold">报告模板</h1>
       <div class="flex gap-2">

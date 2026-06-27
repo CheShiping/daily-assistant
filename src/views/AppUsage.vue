@@ -1,7 +1,12 @@
 <script setup lang="ts">
+<<<<<<< HEAD
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Loader2, Sparkles, RefreshCw } from 'lucide-vue-next'
+=======
+import { ref, computed, onMounted, watch } from 'vue'
+import { Loader2 } from 'lucide-vue-next'
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 import { Bar, Doughnut } from 'vue-chartjs'
 import {
   Chart,
@@ -21,8 +26,11 @@ interface AppRow {
   lastUsedAt: string | null
 }
 
+<<<<<<< HEAD
 const router = useRouter()
 
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 const ranges = [
   { k: 'today' as const, l: '今日' },
   { k: 'week' as const, l: '本周' },
@@ -37,6 +45,7 @@ const chartMode = ref<'bar' | 'pie'>('bar')
 const loading = ref(false)
 const items = ref<AppRow[]>([])
 
+<<<<<<< HEAD
 // AI 洞察
 const insightText = ref('')
 const insightLoading = ref(false)
@@ -44,6 +53,8 @@ const insightCache = new Map<string, string>()
 let insightUnsub: (() => void) | null = null
 let insightStatusUnsub: (() => void) | null = null
 
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 function formatDuration(sec: number): string {
   if (sec < 60) return `${sec}秒`
   if (sec < 3600) return `${(sec / 60).toFixed(1)}分钟`
@@ -109,6 +120,7 @@ async function load() {
   } finally {
     loading.value = false
   }
+<<<<<<< HEAD
   loadInsight()
 }
 
@@ -164,6 +176,8 @@ function refreshInsight() {
   insightCache.delete(insightCacheKey())
   insightText.value = ''
   loadInsight()
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 }
 
 watch(range, (r) => {
@@ -174,11 +188,14 @@ onMounted(() => {
   load()
 })
 
+<<<<<<< HEAD
 onUnmounted(() => {
   insightUnsub?.()
   insightStatusUnsub?.()
 })
 
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 const topApps = computed(() => items.value.slice(0, 20))
 const totalApps = computed(() => items.value.length)
 const totalSec = computed(() => items.value.reduce((s, i) => s + i.durationSec, 0))
@@ -365,6 +382,7 @@ const pieOptions: ChartOptions<'doughnut'> = {
         </tbody>
       </table>
     </div>
+<<<<<<< HEAD
 
     <!-- AI 洞察 -->
     <div v-if="!loading && items.length > 0" class="card p-4 mt-6">
@@ -391,5 +409,7 @@ const pieOptions: ChartOptions<'doughnut'> = {
         @click="router.push('/agent')"
       >展开详细分析 →</button>
     </div>
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   </div>
 </template>

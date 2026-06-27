@@ -1,7 +1,11 @@
 {
   "name": "daily-assistant",
   "private": false,
+<<<<<<< HEAD
   "version": "2.0.0",
+=======
+  "version": "1.3.0",
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   "description": "牙牙乐日报助手 - 基于自有 API Key 的开源工作日报生成工具",
   "author": "",
   "main": "dist-electron/main.js",

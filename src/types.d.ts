@@ -12,6 +12,7 @@ export interface AppSettings {
   memoryContent: string
   customInstruction: string
   preservePath: string
+<<<<<<< HEAD
   autoDeleteScreenshots: boolean
   sensitiveSceneSkip: boolean
   privacyLevel: 'loose' | 'standard' | 'strict'
@@ -23,6 +24,8 @@ export interface AppSettings {
   localApiEnabled: boolean
   localApiPort: number
   localApiToken: string
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 }
 
 export interface WorkRecord {
@@ -57,7 +60,10 @@ export interface ReportTemplate {
   type: 'daily' | 'weekly' | 'monthly'
   content: string
   isBuiltin: boolean
+<<<<<<< HEAD
   clustering: 'timeline' | 'category' | 'project'
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   createdAt: string
   updatedAt: string
 }
@@ -72,6 +78,7 @@ export interface Screenshot {
   createdAt: string
 }
 
+<<<<<<< HEAD
 export interface PlanItem {
   id: string
   date: string
@@ -82,6 +89,8 @@ export interface PlanItem {
   updatedAt: string
 }
 
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 interface Api {
   minimize(): void
   maximize(): void
@@ -101,22 +110,31 @@ interface Api {
       templateBody?: string
       customInstruction?: string
       memoryContent?: string
+<<<<<<< HEAD
       clustering?: 'timeline' | 'category' | 'project'
       plans?: Array<{ text: string; completed: boolean }>
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
       records: Array<{ startedAt: string; summary: string; category?: string }>
       appUsageSummary?: Array<{ appName: string; durationMinutes: number }>
     }): Promise<{ id: string }>
     generateTemplate(input: { reference: string; requirements: string; type: 'daily' | 'weekly' | 'monthly' }): Promise<{ started: boolean }>
+<<<<<<< HEAD
     chat(input: { messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>; sessionId: string }): Promise<{ ok: boolean; error?: string }>
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
     onReportStreamChunk(cb: (data: { id: string; chunk: string }) => void): () => void
     onReportStatusChanged(cb: (data: any) => void): () => void
     onTemplateStreamChunk(cb: (data: { chunk: string }) => void): () => void
     onTemplateStatusChanged(cb: (data: any) => void): () => void
+<<<<<<< HEAD
     onChatStreamChunk(cb: (data: { sessionId: string; chunk: string }) => void): () => void
     onChatStatusChanged(cb: (data: { sessionId: string; status: 'completed' | 'failed'; content?: string; error?: string }) => void): () => void
     generateInsight(input: { type: 'heatmap' | 'appUsage'; data: any }): Promise<{ ok: boolean; error?: string }>
     onInsightStreamChunk(cb: (data: { type: string; chunk: string }) => void): () => void
     onInsightStatusChanged(cb: (data: { type: string; status: 'completed' | 'failed'; content?: string; error?: string }) => void): () => void
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   }
   workRecords: {
     list(input: { date?: string; startDate?: string; endDate?: string; limit?: number; offset?: number }): Promise<WorkRecord[]>
@@ -134,6 +152,7 @@ interface Api {
   }
   reportTemplates: {
     list(type?: string): Promise<ReportTemplate[]>
+<<<<<<< HEAD
     create(input: { name: string; type: string; content: string; clustering?: 'timeline' | 'category' | 'project' }): Promise<ReportTemplate>
     update(input: { id: string; name?: string; content?: string }): Promise<ReportTemplate>
     delete(id: string): Promise<{ ok: boolean }>
@@ -150,6 +169,12 @@ interface Api {
     stop(): Promise<{ ok: boolean }>
     regenerateToken(): Promise<{ ok: boolean; token: string }>
   }
+=======
+    create(input: { name: string; type: string; content: string }): Promise<ReportTemplate>
+    update(input: { id: string; name?: string; content?: string }): Promise<ReportTemplate>
+    delete(id: string): Promise<{ ok: boolean }>
+  }
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   screenshots: {
     status(): Promise<{ running: boolean }>
     captureNow(): Promise<{ ok: boolean; summary?: string; category?: string; error?: string }>

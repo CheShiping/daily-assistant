@@ -20,10 +20,13 @@ contextBridge.exposeInMainWorld('api', {
     testConnection: () => ipcRenderer.invoke('ai:test-connection'),
     generateReport: (input: any) => ipcRenderer.invoke('ai:generate-report', input),
     generateTemplate: (input: any) => ipcRenderer.invoke('ai:generate-template', input),
+<<<<<<< HEAD
     chat: (input: { messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>; sessionId: string }) =>
       ipcRenderer.invoke('ai:chat', input),
     generateInsight: (input: { type: 'heatmap' | 'appUsage'; data: any }) =>
       ipcRenderer.invoke('ai:insight', input),
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
     onReportStreamChunk: (cb: (data: any) => void) => {
       const l = (_e: any, d: any) => cb(d)
       ipcRenderer.on('report:stream-chunk', l)
@@ -43,6 +46,7 @@ contextBridge.exposeInMainWorld('api', {
       const l = (_e: any, d: any) => cb(d)
       ipcRenderer.on('ai:template-status-changed', l)
       return () => ipcRenderer.removeListener('ai:template-status-changed', l)
+<<<<<<< HEAD
     },
     onChatStreamChunk: (cb: (data: any) => void) => {
       const l = (_e: any, d: any) => cb(d)
@@ -63,6 +67,8 @@ contextBridge.exposeInMainWorld('api', {
       const l = (_e: any, d: any) => cb(d)
       ipcRenderer.on('ai:insight-status-changed', l)
       return () => ipcRenderer.removeListener('ai:insight-status-changed', l)
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
     }
   },
 
@@ -92,6 +98,7 @@ contextBridge.exposeInMainWorld('api', {
     delete: (id: string) => ipcRenderer.invoke('report-templates:delete', { id })
   },
 
+<<<<<<< HEAD
   // 计划
   plans: {
     list: (input: { date: string }) => ipcRenderer.invoke('plans:list', input),
@@ -108,6 +115,8 @@ contextBridge.exposeInMainWorld('api', {
     regenerateToken: () => ipcRenderer.invoke('localApi:regenerateToken')
   },
 
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   // 时间线/热力图/应用使用
   timeline: {
     list: (input: any) => ipcRenderer.invoke('timeline:list', input)

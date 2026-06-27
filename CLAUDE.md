@@ -58,7 +58,11 @@ Uses OpenAI-compatible API format (`/chat/completions`). Configurable `baseUrl`,
 
 ### Database (`electron/db.ts`)
 
+<<<<<<< HEAD
 JSON file at `app.getPath('userData')/daily-assistant.json`. Single in-memory object with debounced writes (100ms). Schema version 2 (v1→v2 migration adds `templates.clustering` field, `planItems` table, and Phase 1 default settings). Tables: `workRecords`, `reports`, `templates`, `screenshots`, `appUsageRecords`, `planItems`, `settings`. Builtin templates are seeded on first run.
+=======
+JSON file at `app.getPath('userData')/daily-assistant.json`. Single in-memory object with debounced writes (100ms). Schema version 1. Tables: `workRecords`, `reports`, `templates`, `screenshots`, `appUsageRecords`, `settings`. Builtin templates are seeded on first run.
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 
 ## Key Conventions
 

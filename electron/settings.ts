@@ -14,6 +14,7 @@ export interface AppSettings {
   preservePath: string
   scheduledReportEnabled: boolean
   scheduledReportTime: string
+<<<<<<< HEAD
   // Phase 1 新增
   autoDeleteScreenshots: boolean
   sensitiveSceneSkip: boolean
@@ -26,6 +27,8 @@ export interface AppSettings {
   localApiEnabled: boolean
   localApiPort: number
   localApiToken: string
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 }
 
 const DEFAULTS: AppSettings = {
@@ -40,6 +43,7 @@ const DEFAULTS: AppSettings = {
   customInstruction: '',
   preservePath: '',
   scheduledReportEnabled: true,
+<<<<<<< HEAD
   scheduledReportTime: '18:00',
   // Phase 1 新增
   autoDeleteScreenshots: true,
@@ -53,6 +57,9 @@ const DEFAULTS: AppSettings = {
   localApiEnabled: false,
   localApiPort: 8088,
   localApiToken: ''
+=======
+  scheduledReportTime: '18:00'
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 }
 
 export function getSettings(): AppSettings {
@@ -70,6 +77,7 @@ export function getSettings(): AppSettings {
     customInstruction: map.customInstruction ?? '',
     preservePath: map.preservePath ?? '',
     scheduledReportEnabled: map.scheduledReportEnabled !== 'false',
+<<<<<<< HEAD
     scheduledReportTime: map.scheduledReportTime ?? DEFAULTS.scheduledReportTime,
     // Phase 1 新增
     autoDeleteScreenshots: map.autoDeleteScreenshots !== 'false',
@@ -83,6 +91,9 @@ export function getSettings(): AppSettings {
     localApiEnabled: map.localApiEnabled === 'true',
     localApiPort: Number(map.localApiPort ?? DEFAULTS.localApiPort),
     localApiToken: map.localApiToken ?? ''
+=======
+    scheduledReportTime: map.scheduledReportTime ?? DEFAULTS.scheduledReportTime
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   }
 }
 
@@ -101,6 +112,7 @@ export function updateSettings(patch: Partial<AppSettings>): AppSettings {
   setSetting('preservePath', next.preservePath)
   setSetting('scheduledReportEnabled', String(next.scheduledReportEnabled))
   setSetting('scheduledReportTime', next.scheduledReportTime)
+<<<<<<< HEAD
   // Phase 1 新增
   setSetting('autoDeleteScreenshots', String(next.autoDeleteScreenshots))
   setSetting('sensitiveSceneSkip', String(next.sensitiveSceneSkip))
@@ -113,5 +125,7 @@ export function updateSettings(patch: Partial<AppSettings>): AppSettings {
   setSetting('localApiEnabled', String(next.localApiEnabled))
   setSetting('localApiPort', String(next.localApiPort))
   setSetting('localApiToken', next.localApiToken)
+=======
+>>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   return next
 }
