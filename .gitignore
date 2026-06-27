@@ -1,7 +1,7 @@
 node_modules
 /.vscode/
 /dist/
-/release-v130/
+/release/
 *.log
 .env*
 /build/
