@@ -1,7 +1,6 @@
 // 主进程入口
 import { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, shell, dialog, screen, globalShortcut } from 'electron'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import {
   getDb, closeDb,
@@ -19,7 +18,8 @@ import { startScreenshot, stopScreenshot, isScreenshotRunning, captureNow } from
 import { startAppTracker, stopAppTracker } from './appTracker'
 import { startApiServer, stopApiServer, isApiServerRunning, regenerateApiToken } from './api-server'
 
-const __dirname = (typeof __dirname !== 'undefined' ? __dirname : process.cwd())
+// 在 CJS 编译产物下，__dirname 由 Node 注入；显式声明避免 TS 自身引用告警
+declare const __dirname: string
 
 app.setName('牙牙乐日报助手')
 
@@ -47,7 +47,7 @@ function createWindow() {
     backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false
     }

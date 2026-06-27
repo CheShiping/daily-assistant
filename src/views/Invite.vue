@@ -2,19 +2,23 @@
 import { ref, onMounted } from 'vue'
 import { Gift, Copy, Check, Users, Link, Sparkles } from 'lucide-vue-next'
 import type { AppSettings } from '@/types'
+import { safeCall, FALLBACK_SETTINGS } from '@/lib/utils'
 
-const settings = ref<AppSettings | null>(null)
+const settings = ref<AppSettings>({ ...FALLBACK_SETTINGS })
 const inviteCode = ref('')
 const inviteLink = ref('')
 const codeCopied = ref(false)
 const linkCopied = ref(false)
 
 async function load() {
-  settings.value = await window.api.settings.get()
+  const s = await safeCall(() => window.api.settings.get(), { ...FALLBACK_SETTINGS })
+  settings.value = { ...FALLBACK_SETTINGS, ...s }
   // 若无邀请码，本地生成一个稳定的（基于现有 inviteCode 或随机）
   if (!settings.value.inviteCode) {
     const code = 'YAYA-' + Math.random().toString(36).slice(2, 8).toUpperCase()
-    await window.api.settings.update({ inviteCode: code })
+    if (typeof window !== 'undefined' && (window as any).api?.settings?.update) {
+      await (window as any).api.settings.update({ inviteCode: code })
+    }
     settings.value.inviteCode = code
   }
   inviteCode.value = settings.value.inviteCode
@@ -40,7 +44,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="p-6 px-7 max-w-2xl mx-auto pb-12 w-full h-full overflow-y-auto min-h-0">
+  <div class="p-6 px-7 max-w-[1280px] mx-auto pb-12 w-full h-full overflow-y-auto min-h-0">
     <div class="text-center mb-8">
       <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
         <Gift class="w-6 h-6 text-primary" />

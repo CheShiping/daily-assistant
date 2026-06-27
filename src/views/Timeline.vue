@@ -1,388 +1,452 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import type { WorkRecord } from '@/types'
-import { today } from '@/lib/utils'
 import {
-  Bot, Download, Plus, Search, BarChart3, Clock,
-  Upload, Camera, Edit3, Trash2
+  Loader2, Sparkles, Bot, Plus, Edit3, Trash2, Check, X,
+  Pencil, MessageSquare, Calendar, Layers, Filter
 } from 'lucide-vue-next'
-import { Doughnut } from 'vue-chartjs'
-import { Chart, registerables } from 'chart.js'
-import type { ChartData, ChartOptions } from 'chart.js'
-
-Chart.register(...registerables)
+import { today, formatDate, formatTime, safeCall, isApiReady } from '@/lib/utils'
+import type { WorkRecord } from '@/types'
+import { toast } from '@/lib/toast'
 
 const router = useRouter()
 
+const startDate = ref(today())
+const endDate = ref(today())
 const records = ref<WorkRecord[]>([])
-const startDate = ref('')
-const endDate = ref('')
-const searchQuery = ref('')
-const showCategoryChart = ref(true)
-const chartMode = ref<'bar' | 'pie'>('bar')
-const timeFilter = ref<'30m' | '1h' | '2h' | 'today'>('today')
+const loading = ref(false)
+const query = ref('')
+const showCategoryFilter = ref(false)   // 分类多选面板
 
-const timeFilters = [
-  { k: '30m' as const, l: '近30分' },
-  { k: '1h' as const, l: '近1小时' },
-  { k: '2h' as const, l: '近2小时' },
-  { k: 'today' as const, l: '今天' }
-]
+// ============ 分类多选 ============
+const allCategories = ['开发', '会议', '文档', '沟通', '设计', '学习', '其他']
+const selectedCats = ref<string[]>([...allCategories])
 
-const categoryColors: Record<string, { dot: string; label: string; chart: string }> = {
-  '开发': { dot: 'bg-emerald-500', label: 'text-emerald-600 bg-emerald-500/10', chart: '#10b981' },
-  '会议': { dot: 'bg-blue-500', label: 'text-blue-600 bg-blue-500/10', chart: '#3b82f6' },
-  '沟通': { dot: 'bg-amber-500', label: 'text-amber-600 bg-amber-500/10', chart: '#f59e0b' },
-  '文档': { dot: 'bg-purple-500', label: 'text-purple-600 bg-purple-500/10', chart: '#a855f7' },
-  '测试': { dot: 'bg-rose-500', label: 'text-rose-600 bg-rose-500/10', chart: '#f43f5e' },
-  '设计': { dot: 'bg-cyan-500', label: 'text-cyan-600 bg-cyan-500/10', chart: '#06b6d4' },
-  '运维': { dot: 'bg-red-500', label: 'text-red-600 bg-red-500/10', chart: '#ef4444' },
-  '数据分析': { dot: 'bg-teal-500', label: 'text-teal-600 bg-teal-500/10', chart: '#14b8a6' },
-  '学习': { dot: 'bg-indigo-500', label: 'text-indigo-600 bg-indigo-500/10', chart: '#6366f1' },
-  '管理': { dot: 'bg-pink-500', label: 'text-pink-600 bg-pink-500/10', chart: '#ec4899' },
-  '产品': { dot: 'bg-violet-500', label: 'text-violet-600 bg-violet-500/10', chart: '#8b5cf6' },
-  '生活': { dot: 'bg-orange-500', label: 'text-orange-600 bg-orange-500/10', chart: '#f97316' },
-  '其他': { dot: 'bg-zinc-500', label: 'text-zinc-600 bg-zinc-500/10', chart: '#71717a' }
+const categoryStats = computed(() => {
+  const m = new Map<string, number>()
+  for (const r of records.value) {
+    const c = r.category ?? '其他'
+    m.set(c, (m.get(c) ?? 0) + 1)
+  }
+  return m
+})
+
+const totalSelectedMinutes = computed(() => {
+  let total = 0
+  for (const r of records.value) {
+    if (!selectedCats.value.includes(r.category ?? '其他')) continue
+    const start = new Date(r.startedAt).getTime()
+    const end = r.endedAt ? new Date(r.endedAt).getTime() : start
+    total += Math.max(0, (end - start) / 60000)
+  }
+  return Math.round(total)
+})
+
+function toggleCategory(cat: string) {
+  const i = selectedCats.value.indexOf(cat)
+  if (i >= 0) selectedCats.value.splice(i, 1)
+  else selectedCats.value.push(cat)
 }
-function catColor(cat: string | null | undefined) {
-  if (cat && categoryColors[cat]) return categoryColors[cat]
-  return categoryColors['其他']
+
+function selectAll() { selectedCats.value = [...allCategories] }
+function selectNone() { selectedCats.value = [] }
+
+// ============ 过滤 & 分组 ============
+const filtered = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  return records.value.filter(r => {
+    if (!selectedCats.value.includes(r.category ?? '其他')) return false
+    if (q && !(r.summary ?? '').toLowerCase().includes(q)) return false
+    return true
+  })
+})
+
+// 按日 + 上下午 分组
+const groupedByDate = computed(() => {
+  const out: { date: string; items: WorkRecord[] }[] = []
+  const map = new Map<string, WorkRecord[]>()
+  for (const r of filtered.value) {
+    const d = formatDate(r.startedAt)
+    if (!map.has(d)) map.set(d, [])
+    map.get(d)!.push(r)
+  }
+  for (const [d, items] of [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]))) {
+    out.push({ date: d, items: items.sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime()) })
+  }
+  return out
+})
+
+// ============ 摘要 ============
+const summary = computed(() => {
+  const total = filtered.value.length
+  let minutes = 0
+  const byApp = new Map<string, number>()
+  for (const r of filtered.value) {
+    const start = new Date(r.startedAt).getTime()
+    const end = r.endedAt ? new Date(r.endedAt).getTime() : start
+    minutes += Math.max(0, (end - start) / 60000)
+    const app = r.appName ?? '未知'
+    byApp.set(app, (byApp.get(app) ?? 0) + Math.max(0, (end - start) / 60000))
+  }
+  const apps = [...byApp.entries()].sort((a, b) => b[1] - a[1])
+  return {
+    total,
+    minutes: Math.round(minutes),
+    hours: (minutes / 60).toFixed(1),
+    topApps: apps.slice(0, 3).map(([n, m]) => ({ name: n, min: Math.round(m) }))
+  }
+})
+
+// ============ 数据加载 ============
+async function load() {
+  loading.value = true
+  try {
+    const s = new Date(startDate.value)
+    s.setHours(0, 0, 0, 0)
+    const e = new Date(endDate.value)
+    e.setHours(23, 59, 59, 999)
+    const list = await safeCall(
+      () => window.api.workRecords.list({ startDate: s.toISOString(), endDate: e.toISOString() }),
+      [] as WorkRecord[]
+    )
+    records.value = list
+  } finally {
+    loading.value = false
+  }
 }
 
-function initRange() {
+watch([startDate, endDate], load)
+
+// 重置日期范围为今天
+function resetRange() {
   startDate.value = today()
   endDate.value = today()
 }
 
-async function load() {
-  const s = new Date(startDate.value)
-  s.setHours(0, 0, 0, 0)
-  const e = new Date(endDate.value)
-  e.setHours(23, 59, 59, 999)
-  const list = await window.api.workRecords.list({
-    startDate: s.toISOString(),
-    endDate: e.toISOString()
-  })
-  records.value = list.sort((a, b) => {
-    const ae = a.endedAt ? new Date(a.endedAt).getTime() : new Date(a.startedAt).getTime()
-    const be = b.endedAt ? new Date(b.endedAt).getTime() : new Date(b.startedAt).getTime()
-    return be - ae
-  })
+// ============ 编辑 & 删除 ============
+const editingId = ref<string | null>(null)
+const editText = ref('')
+
+function startEdit(r: WorkRecord) {
+  editingId.value = r.id
+  editText.value = r.summary
 }
 
-function formatTime(date: string | Date | null | undefined): string {
-  if (!date) return '--:--'
-  const d = typeof date === 'string' ? new Date(date) : date
-  const h = String(d.getHours()).padStart(2, '0')
-  const min = String(d.getMinutes()).padStart(2, '0')
-  return `${h}:${min}`
-}
-
-function recordMinutes(r: WorkRecord): number {
-  if (r.endedAt) {
-    return Math.max(1, Math.round((new Date(r.endedAt).getTime() - new Date(r.startedAt).getTime()) / 60000))
+async function saveEdit() {
+  if (!editingId.value) return
+  if (!isApiReady()) {
+    const r = records.value.find(x => x.id === editingId.value)
+    if (r) r.summary = editText.value
+    editingId.value = null
+    toast.info('已本地更新（dev 模式）')
+    return
   }
-  return 5
-}
-
-const filteredRecords = computed(() => {
-  const now = Date.now()
-  let list = records.value
-  if (timeFilter.value === 'today') {
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
-    const t0 = startOfToday.getTime()
-    list = list.filter(r => {
-      const t = r.endedAt ? new Date(r.endedAt).getTime() : new Date(r.startedAt).getTime()
-      return t >= t0
-    })
-  } else {
-    const ms = timeFilter.value === '30m' ? 30 * 60 * 1000
-      : timeFilter.value === '1h' ? 60 * 60 * 1000
-      : 2 * 60 * 60 * 1000
-    list = list.filter(r => {
-      const t = r.endedAt ? new Date(r.endedAt).getTime() : new Date(r.startedAt).getTime()
-      return now - t <= ms
-    })
-  }
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    list = list.filter(r => r.summary.toLowerCase().includes(q) || (r.category ?? '').toLowerCase().includes(q))
-  }
-  return list
-})
-
-const totalCount = computed(() => filteredRecords.value.length)
-
-const focusMinutes = computed(() => {
-  let m = 0
-  for (const r of filteredRecords.value) m += recordMinutes(r)
-  return m
-})
-
-const focusHours = computed(() => Math.round((focusMinutes.value / 60) * 10) / 10)
-
-const activePeriod = computed(() => {
-  if (filteredRecords.value.length === 0) return '—'
-  let minStart = Infinity
-  let maxEnd = -Infinity
-  for (const r of filteredRecords.value) {
-    const s = new Date(r.startedAt).getTime()
-    const e = r.endedAt ? new Date(r.endedAt).getTime() : s
-    if (s < minStart) minStart = s
-    if (e > maxEnd) maxEnd = e
-  }
-  return `${formatTime(new Date(minStart))} - ${formatTime(new Date(maxEnd))}`
-})
-
-const categoryStats = computed(() => {
-  const map = new Map<string, number>()
-  for (const r of filteredRecords.value) {
-    const cat = r.category ?? '其他'
-    map.set(cat, (map.get(cat) ?? 0) + recordMinutes(r))
-  }
-  const total = Array.from(map.values()).reduce((a, b) => a + b, 0)
-  return Array.from(map.entries())
-    .map(([name, minutes]) => ({
-      name,
-      minutes,
-      percent: total === 0 ? 0 : Math.round((minutes / total) * 100)
-    }))
-    .sort((a, b) => b.minutes - a.minutes)
-})
-
-const pieData = computed<ChartData<'doughnut'>>(() => ({
-  labels: categoryStats.value.map(i => i.name),
-  datasets: [{
-    data: categoryStats.value.map(i => i.minutes),
-    backgroundColor: categoryStats.value.map(i => catColor(i.name).chart),
-    borderWidth: 0
-  }]
-}))
-
-const pieOptions: ChartOptions<'doughnut'> = {
-  responsive: true,
-  maintainAspectRatio: false,
-  cutout: '0%',
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      callbacks: {
-        label: (ctx) => `${ctx.label ?? ''}: ${ctx.parsed} 分`
-      }
-    }
-  }
-}
-
-function isIdle(r: WorkRecord, idx: number): boolean {
-  if (idx >= filteredRecords.value.length - 1) return false
-  const next = filteredRecords.value[idx + 1]
-  const nextEnd = next.endedAt ? new Date(next.endedAt).getTime() : new Date(next.startedAt).getTime()
-  const thisStart = new Date(r.startedAt).getTime()
-  return thisStart - nextEnd > 10 * 60 * 1000
-}
-
-async function deleteRecord(r: WorkRecord) {
-  await window.api.workRecords.delete(r.id)
-  await load()
-}
-
-function displaySummary(summary: string): string {
-  if (!summary) return ''
-  const raw = summary.trim()
-  // 如果不像 JSON（不以 { 或 [ 或 ``` 开头），直接返回
-  if (!raw.startsWith('{') && !raw.startsWith('[') && !raw.startsWith('```')) {
-    return summary
-  }
-  // 策略1：标准 JSON 解析（去除 markdown 代码块标记）
   try {
-    let s = raw
-    if (s.startsWith('```json')) s = s.slice(7)
-    else if (s.startsWith('```')) s = s.slice(3)
-    if (s.endsWith('```')) s = s.slice(0, -3)
-    s = s.trim()
-    const parsed = JSON.parse(s)
-    if (parsed && typeof parsed.summary === 'string' && parsed.summary.trim()) return parsed.summary
-  } catch {}
-  // 策略2：正则提取 summary 字段（兼容被截断的 JSON、带前缀文本的 JSON）
-  const m = raw.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/)
-  if (m && m[1]) {
-    const extracted = m[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\').trim()
-    if (extracted) return extracted
+    await window.api.workRecords.update({ id: editingId.value, summary: editText.value })
+    editingId.value = null
+    await load()
+    toast.success('记录已更新')
+  } catch (e: any) {
+    toast.error('更新失败：' + (e?.message ?? '未知错误'))
   }
-  // 策略3：summary 值可能没有闭合引号（被截断），提取到行尾或字符串尾
-  const m2 = raw.match(/"summary"\s*:\s*"(.*)$/s)
-  if (m2 && m2[1]) {
-    const extracted = m2[1].replace(/["}\s\\]+$/, '').replace(/\\n/g, '\n').replace(/\\"/g, '"').trim()
-    if (extracted) return extracted
-  }
-  return summary
 }
 
-function copyAllLogs() {
-  const text = filteredRecords.value
-    .map(r => `${formatTime(r.startedAt)} - ${formatTime(r.endedAt)} | ${r.category ?? '其他'} | ${r.summary}`)
-    .join('\n')
-  navigator.clipboard.writeText(text)
+async function removeRecord(r: WorkRecord) {
+  if (!confirm('删除这条工作记录？')) return
+  if (!isApiReady()) {
+    records.value = records.value.filter(x => x.id !== r.id)
+    toast.info('已本地删除（dev 模式）')
+    return
+  }
+  try {
+    await window.api.workRecords.delete(r.id)
+    await load()
+    toast.success('记录已删除')
+  } catch (e: any) {
+    toast.error('删除失败：' + (e?.message ?? '未知错误'))
+  }
 }
 
-function exportData() {
-  const blob = new Blob([JSON.stringify(filteredRecords.value, null, 2)], { type: 'application/json' })
+function askAI(r: WorkRecord) {
+  router.push({ path: '/agent', query: { q: `这条工作内容能告诉我什么？ ${r.summary}` } })
+}
+
+function gotoAdd() {
+  router.push('/today')
+}
+
+function exportCsv() {
+  if (filtered.value.length === 0) {
+    toast.warning('没有可导出的记录')
+    return
+  }
+  const lines = ['时间,分类,应用,内容,持续(分钟)']
+  for (const r of filtered.value) {
+    const start = new Date(r.startedAt)
+    const end = r.endedAt ? new Date(r.endedAt) : start
+    const min = Math.round((end.getTime() - start.getTime()) / 60000)
+    const text = (r.summary ?? '').replace(/"/g, '""')
+    lines.push(`${start.toISOString()},${r.category ?? ''},${r.appName ?? ''},"${text}",${min}`)
+  }
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `timeline-${startDate.value}-${endDate.value}.json`
+  a.download = `timeline-${startDate.value}_to_${endDate.value}.csv`
   a.click()
   URL.revokeObjectURL(url)
+  toast.success('CSV 已导出')
 }
 
-onMounted(() => {
-  initRange()
-  load()
-})
+function durationMin(r: WorkRecord): number {
+  const start = new Date(r.startedAt).getTime()
+  const end = r.endedAt ? new Date(r.endedAt).getTime() : start
+  return Math.max(0, Math.round((end - start) / 60000))
+}
+
+function timeOf(r: WorkRecord) {
+  return formatTime(r.startedAt)
+}
+
+function durationLabel(min: number) {
+  if (min < 60) return `${min} 分`
+  return `${Math.floor(min / 60)}时${min % 60}分`
+}
+
+function categoryColor(cat?: string) {
+  const map: Record<string, string> = {
+    '开发': 'hsl(204 70% 45%)',
+    '会议': 'hsl(280 50% 50%)',
+    '文档': 'hsl(165 21% 40%)',
+    '沟通': 'hsl(27 92% 50%)',
+    '设计': 'hsl(340 70% 50%)',
+    '学习': 'hsl(170 50% 35%)',
+    '其他': 'hsl(220 10% 50%)'
+  }
+  return map[cat ?? '其他'] ?? 'hsl(220 10% 50%)'
+}
+
+onMounted(load)
 </script>
 
 <template>
-  <div class="flex flex-col gap-5 p-6 px-7">
-    <!-- 1. 描述行 -->
-    <div class="pt-4 pb-0.5">
-      <p class="text-xs text-[#999]">查看全天工作活动轨迹，了解时间都花在了哪里</p>
+  <div class="p-6 px-7 max-w-[1280px] mx-auto w-full h-full overflow-y-auto min-h-0">
+    <!-- 标题区 -->
+    <div class="flex items-end justify-between mb-5">
+      <div>
+        <h1 class="font-display text-[26px] font-bold tracking-tight">工作时间线</h1>
+        <p class="text-xs text-muted-foreground mt-1">查看全天工作活动轨迹，了解时间都花在了哪里</p>
+      </div>
     </div>
 
-    <!-- 2. 顶栏：日期 + 4 按钮 + 搜索 -->
-    <section class="rounded-[10px] bg-black/[0.02] p-4 px-[18px]">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <input type="date" v-model="startDate" @change="load" class="h-7 w-[130px] text-xs border border-black/10 rounded-md bg-transparent px-2" />
-          <span class="text-xs text-[#999]">至</span>
-          <input type="date" v-model="endDate" @change="load" class="h-7 w-[130px] text-xs border border-black/10 rounded-md bg-transparent px-2" />
-        </div>
-        <div class="flex items-center gap-3">
-          <button class="h-7 px-3 gap-1.5 text-xs border border-black/10 rounded-md flex items-center hover:bg-black/[0.03]" @click="router.push('/agent')"><Bot :size="13" /> 与AI对话</button>
-          <button class="h-7 px-3 gap-1.5 text-xs border border-black/10 rounded-md flex items-center hover:bg-black/[0.03]" @click="exportData"><Download :size="13" /> 导出数据</button>
-          <button class="h-7 px-3 gap-1.5 text-xs border border-black/10 rounded-md flex items-center hover:bg-black/[0.03]" @click="router.push('/records')"><Plus :size="13" /> 添加记录</button>
-          <div class="relative">
-            <Search :size="13" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#bbb]" />
-            <input v-model="searchQuery" class="h-7 w-[160px] pl-8 text-xs border border-black/10 rounded-md bg-transparent" placeholder="搜索活动..." />
-          </div>
-        </div>
+    <!-- 工具条 · 一行铺满 -->
+    <div class="card p-3 mb-4 flex flex-wrap items-center gap-3">
+      <!-- 日期范围（与 Heatmap 卡片风格统一：Quasar q-input + q-date） -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-[11.5px] font-mono uppercase tracking-wider text-muted-foreground">日期范围</span>
+        <q-input v-model="startDate" outlined dense mask="####-##-##" class="date-input">
+          <template v-slot:append>
+            <q-icon name="event" class="cursor-pointer">
+              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                <q-date v-model="startDate" mask="YYYY-MM-DD" minimal />
+              </q-popup-proxy>
+            </q-icon>
+          </template>
+        </q-input>
+        <span class="text-muted-foreground text-xs">至</span>
+        <q-input v-model="endDate" outlined dense mask="####-##-##" class="date-input">
+          <template v-slot:append>
+            <q-icon name="event" class="cursor-pointer">
+              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                <q-date v-model="endDate" mask="YYYY-MM-DD" minimal />
+              </q-popup-proxy>
+            </q-icon>
+          </template>
+        </q-input>
+        <button
+          class="text-xs text-muted-foreground hover:text-primary transition-colors"
+          @click="resetRange"
+        >重置</button>
       </div>
-    </section>
 
-    <!-- 3. 统计条 -->
-    <section class="rounded-[10px] bg-black/[0.02] p-4 px-[18px]">
-      <div class="flex items-center justify-between">
-        <div class="flex gap-7">
-          <div class="flex flex-col gap-[3px]">
-            <span class="text-lg font-semibold leading-tight">{{ totalCount }}</span>
-            <span class="text-xs text-[#999] leading-none">记录条数</span>
-          </div>
-          <div class="flex flex-col gap-[3px]">
-            <span class="text-lg font-semibold leading-tight">{{ focusHours }}h</span>
-            <span class="text-xs text-[#999] leading-none">专注时长</span>
-          </div>
-          <div class="flex flex-col gap-[3px]">
-            <span class="text-lg font-semibold leading-tight">{{ activePeriod }}</span>
-            <span class="text-xs text-[#999] leading-none">活跃时段</span>
-          </div>
-        </div>
-        <label class="flex items-center gap-1.5 cursor-pointer">
-          <input type="checkbox" v-model="showCategoryChart" class="size-3.5" />
-          <span class="text-xs text-[#999] leading-none">显示分类时长分布</span>
-        </label>
-      </div>
-    </section>
+      <span class="text-border">|</span>
 
-    <!-- 4. 分类时长分布 -->
-    <section v-if="showCategoryChart" class="rounded-[10px] bg-black/[0.02] p-5 px-[18px]">
-      <div class="flex items-center gap-2 mb-4">
-        <BarChart3 :size="14" stroke-width="1.5" class="text-[#999]" />
-        <h2 class="text-xs font-semibold text-foreground">分类时长分布</h2>
-        <div class="ml-auto flex items-center gap-1 rounded-md border border-black/5 p-0.5">
-          <button @click="chartMode='bar'" :class="['px-2.5 py-1 text-xs rounded transition-colors', chartMode==='bar' ? 'bg-black/[0.06] text-foreground' : 'text-[#999] hover:bg-black/[0.03]']">柱状图</button>
-          <button @click="chartMode='pie'" :class="['px-2.5 py-1 text-xs rounded transition-colors', chartMode==='pie' ? 'bg-black/[0.06] text-foreground' : 'text-[#999] hover:bg-black/[0.03]']">饼图</button>
-        </div>
-      </div>
-      <!-- 柱状图模式：横向条形列表 -->
-      <div v-if="chartMode==='bar'" class="flex flex-col gap-3">
-        <div v-for="item in categoryStats" :key="item.name" class="flex items-center gap-3">
-          <div class="w-2.5 h-2.5 rounded-full shrink-0" :class="catColor(item.name).dot"></div>
-          <span class="text-xs text-foreground">{{ item.name }}</span>
-          <div class="flex-1 h-2 rounded-full bg-black/5">
-            <div class="h-2 rounded-full transition-all" :class="catColor(item.name).dot" :style="{ width: item.percent + '%' }"></div>
-          </div>
-          <span class="text-xs text-[#999] w-14 text-right shrink-0">{{ item.minutes }}分</span>
-        </div>
-      </div>
-      <!-- 饼图模式：用 Chart.js Doughnut -->
-      <div v-else class="flex items-center py-2">
-        <div class="flex-1 flex justify-center">
-          <div class="w-[260px] h-[260px]">
-            <Doughnut v-if="categoryStats.length > 0" :data="pieData" :options="pieOptions" />
-          </div>
-        </div>
-        <div class="grid gap-x-8 gap-y-2.5 pr-1" style="grid-auto-flow: column; grid-template-rows: repeat(7, auto);">
-          <div v-for="item in categoryStats" :key="item.name" class="flex items-center gap-2 cursor-pointer select-none">
-            <div class="w-2.5 h-2.5 rounded-full shrink-0" :class="catColor(item.name).dot"></div>
-            <span class="text-xs text-[#555] whitespace-nowrap">{{ item.name }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 5. 活动时间线 -->
-    <section class="rounded-[10px] bg-black/[0.02] p-5 px-[18px]">
-      <div class="flex items-center gap-2 mb-4">
-        <Clock :size="14" stroke-width="1.5" class="text-[#999]" />
-        <h2 class="text-xs font-semibold text-foreground">活动时间线</h2>
-        <!-- 时间筛选 ButtonGroup（靠右） -->
-        <div class="ml-auto flex items-center gap-0.5">
-          <button v-for="f in timeFilters" :key="f.k" @click="timeFilter=f.k"
-            :class="['h-7 px-3 text-xs transition-colors border',
-              timeFilter===f.k ? 'bg-foreground text-background border-foreground' : 'border-black/10 text-[#999] hover:bg-black/[0.03]',
-              f.k==='30m' ? 'rounded-l-md' : '', f.k==='today' ? 'rounded-r-md' : 'border-l-0']">
-            {{ f.l }}
-          </button>
-        </div>
-        <span class="text-xs text-[#999] whitespace-nowrap cursor-pointer hover:text-foreground ml-3" @click="copyAllLogs">复制日志到剪切板</span>
-      </div>
-      <!-- 3列flex时间线 -->
-      <div class="flex flex-col">
-        <div v-for="(r, idx) in filteredRecords" :key="r.id" class="flex gap-4">
-          <!-- 时间列 -->
-          <div class="w-14 shrink-0 pt-[7px]">
-            <span class="text-xs text-[#999] leading-none">{{ formatTime(r.endedAt) }}</span>
-          </div>
-          <!-- 圆点连线列 -->
-          <div class="w-4 shrink-0 flex flex-col items-center">
-            <div class="w-2.5 h-2.5 rounded-full shrink-0 mt-[5px]" :class="isIdle(r, idx) ? 'bg-[#ddd] border border-[#ccc]' : 'bg-primary'"></div>
-            <div v-if="idx < filteredRecords.length - 1" class="flex-1 w-px my-1"
-                 :class="isIdle(r, idx) ? 'border-l border-dashed border-black/10' : 'bg-primary/30'"></div>
-          </div>
-          <!-- 卡片列 -->
-          <div class="flex-1 pb-4">
-            <div class="rounded-lg bg-white border border-black/[0.06] p-3 group">
-              <p class="text-sm text-[#555] leading-relaxed mb-2 whitespace-pre-wrap">{{ displaySummary(r.summary) }}</p>
-              <div class="flex items-center gap-2">
-                <span v-if="r.category" class="text-xs font-medium px-1.5 py-px rounded" :class="catColor(r.category).label">{{ r.category }}</span>
-                <span v-if="r.source === 'screenshot'" class="text-xs text-[#bbb] flex items-center gap-0.5"><Upload :size="10" /> 主动上传</span>
-                <span class="text-xs text-[#bbb]">{{ formatTime(r.startedAt) }} — {{ formatTime(r.endedAt) }}</span>
-                <div class="ml-auto flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <button class="h-3 w-3 text-[#bbb] hover:text-primary"><Camera :size="6" /></button>
-                  <button class="h-3 w-3 text-[#bbb] hover:text-foreground"><Edit3 :size="6" /></button>
-                  <button class="h-3 w-3 text-[#bbb] hover:text-destructive" @click="deleteRecord(r)"><Trash2 :size="6" /></button>
-                </div>
+      <!-- 分类多选触发器 -->
+      <div class="relative">
+        <button
+          class="btn-outline btn-sm flex items-center gap-1.5"
+          @click="showCategoryFilter = !showCategoryFilter"
+        >
+          <Filter class="w-3.5 h-3.5" />
+          分类筛选
+          <span class="text-[10.5px] font-mono text-muted-foreground">{{ selectedCats.length }}/{{ allCategories.length }}</span>
+        </button>
+        <transition name="ya-menu">
+          <div
+            v-if="showCategoryFilter"
+            class="absolute left-0 top-10 z-20 card p-3 w-80"
+            @click.stop
+          >
+            <div class="flex items-center justify-between mb-2">
+              <div class="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">分类与时长</div>
+              <div class="flex items-center gap-1">
+                <button class="text-[11px] text-muted-foreground hover:text-foreground" @click="selectAll">全选</button>
+                <span class="text-muted-foreground text-[10px]">·</span>
+                <button class="text-[11px] text-muted-foreground hover:text-foreground" @click="selectNone">清空</button>
               </div>
+            </div>
+            <div class="grid grid-cols-2 gap-1">
+              <label
+                v-for="c in allCategories"
+                :key="c"
+                class="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs hover:bg-muted/50 cursor-pointer"
+              >
+                <q-checkbox
+                  class="ya-cb"
+                  :model-value="selectedCats.includes(c)"
+                  color="primary"
+                  dense
+                  @update:model-value="toggleCategory(c)"
+                />
+                <span class="w-2 h-2 rounded-full" :style="{ background: categoryColor(c) }"></span>
+                <span class="flex-1">{{ c }}</span>
+                <span class="text-[10.5px] text-muted-foreground font-mono">{{ categoryStats.get(c) ?? 0 }}</span>
+              </label>
+            </div>
+            <div class="mt-2 pt-2 border-t text-[10.5px] text-muted-foreground flex items-center justify-between">
+              <span>已选 {{ selectedCats.length }} 个分类</span>
+              <span class="font-mono">共 {{ totalSelectedMinutes }} 分钟</span>
+            </div>
+          </div>
+        </transition>
+      </div>
+
+      <div class="flex-1 min-w-[180px]">
+        <input v-model="query" class="input h-9 text-sm" placeholder="搜索活动内容…" />
+      </div>
+
+      <button class="btn-outline btn-sm flex items-center gap-1.5" @click="exportCsv">
+        <Layers class="w-3.5 h-3.5" /> 导出 CSV
+      </button>
+      <button class="btn-outline btn-sm flex items-center gap-1.5" @click="askAI(filtered[0] ?? { summary: '所有' } as any)">
+        <Bot class="w-3.5 h-3.5" /> 与 AI 对话
+      </button>
+      <button class="btn-primary btn-sm flex items-center gap-1.5" @click="gotoAdd">
+        <Plus class="w-3.5 h-3.5" /> 添加记录
+      </button>
+    </div>
+
+    <!-- 摘要三联卡 · 模仿 Reports 风格 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      <div class="card p-4">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">记录条数</div>
+        <div class="font-display text-3xl font-bold tracking-tight mt-1">{{ summary.total }}</div>
+      </div>
+      <div class="card p-4">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">专注时长</div>
+        <div class="font-display text-3xl font-bold tracking-tight mt-1">
+          {{ summary.hours }}<span class="text-base text-muted-foreground ml-1">h</span>
+        </div>
+      </div>
+      <div class="card p-4">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">活跃时段</div>
+        <div class="font-display text-3xl font-bold tracking-tight mt-1">
+          {{ filtered.length > 0 ? Math.round(summary.minutes / Math.max(1, filtered.length)) : 0 }}<span class="text-base text-muted-foreground ml-1">分 / 条</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 加载状态 -->
+    <div v-if="loading" class="card p-12 flex items-center justify-center gap-2 text-muted-foreground">
+      <Loader2 class="w-4 h-4 animate-spin" /> 加载中...
+    </div>
+
+    <!-- 空状态 -->
+    <div v-else-if="filtered.length === 0" class="card p-12 text-center text-muted-foreground">
+      <div class="w-14 h-14 rounded-[14px] mx-auto mb-3 flex items-center justify-center"
+           style="background: linear-gradient(135deg, hsl(165 21% 92%), hsl(27 92% 95%));">
+        <Calendar class="w-6 h-6 text-primary" />
+      </div>
+      <div class="font-display text-[15px] font-semibold mb-1 text-foreground">
+        {{ records.length === 0 ? '当前日期范围内还没有工作记录' : '当前筛选条件下没有记录' }}
+      </div>
+      <p class="text-xs mb-3">{{ records.length === 0 ? '试试调整日期范围，或去"今日"页面添加记录' : '调整分类筛选或清除搜索关键字' }}</p>
+      <button v-if="records.length === 0" class="btn-primary btn-sm" @click="gotoAdd">
+        <Plus class="w-3.5 h-3.5" /> 添加第一条记录
+      </button>
+      <button v-else class="btn-outline btn-sm" @click="selectAll">清空筛选</button>
+    </div>
+
+    <!-- 时间线主体 -->
+    <div v-else class="space-y-4">
+      <div v-for="group in groupedByDate" :key="group.date" class="card overflow-hidden">
+        <!-- 日期 header -->
+        <div class="px-5 py-2.5 bg-muted/30 border-b flex items-center justify-between">
+          <div class="flex items-center gap-2 text-sm font-semibold">
+            <span class="font-mono">{{ group.date }}</span>
+            <span class="text-muted-foreground text-xs font-normal">· {{ group.items.length }} 条</span>
+          </div>
+        </div>
+
+        <!-- 记录列表 -->
+        <div class="divide-y">
+          <div
+            v-for="r in group.items"
+            :key="r.id"
+            class="px-5 py-3.5 flex items-start gap-4 hover:bg-muted/20 transition-colors group"
+          >
+            <!-- 时间 -->
+            <div class="w-14 shrink-0 text-center">
+              <div class="font-mono text-sm font-semibold text-foreground">{{ timeOf(r) }}</div>
+              <div class="text-[10.5px] text-muted-foreground mt-0.5">{{ durationLabel(durationMin(r)) }}</div>
+            </div>
+
+            <!-- 分类色条 -->
+            <div class="w-1 self-stretch rounded-full" :style="{ background: categoryColor(r.category ?? undefined) }"></div>
+
+            <!-- 内容 -->
+            <div class="flex-1 min-w-0">
+              <div v-if="editingId === r.id" class="flex items-center gap-1.5">
+                <input v-model="editText" class="input flex-1 h-8 text-sm" @keyup.enter="saveEdit" @keyup.esc="editingId = null" />
+                <button class="btn-ghost btn-icon btn-sm" @click="saveEdit"><Check class="w-3.5 h-3.5" /></button>
+                <button class="btn-ghost btn-icon btn-sm" @click="editingId = null"><X class="w-3.5 h-3.5" /></button>
+              </div>
+              <div v-else class="text-sm leading-relaxed text-foreground">{{ r.summary }}</div>
+              <div class="flex items-center gap-2 mt-1.5 text-[10.5px] text-muted-foreground">
+                <span class="px-1.5 py-0.5 rounded text-[10.5px] font-medium"
+                      :style="{ background: (categoryColor(r.category ?? undefined) || '') + '20', color: categoryColor(r.category ?? undefined) }">
+                  {{ r.category ?? '其他' }}
+                </span>
+                <span v-if="r.appName">· {{ r.appName }}</span>
+                <span v-if="(r as any).windowTitle" class="truncate max-w-[300px]">· {{ (r as any).windowTitle }}</span>
+              </div>
+            </div>
+
+            <!-- 操作 -->
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <button class="btn-ghost btn-icon btn-sm" @click="startEdit(r)" title="编辑">
+                <Pencil class="w-3.5 h-3.5" />
+              </button>
+              <button class="btn-ghost btn-icon btn-sm" @click="askAI(r)" title="AI 提问">
+                <MessageSquare class="w-3.5 h-3.5" />
+              </button>
+              <button class="btn-ghost btn-icon btn-sm hover:!text-destructive" @click="removeRecord(r)" title="删除">
+                <Trash2 class="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </div>
-        <!-- 空状态 -->
-        <div v-if="filteredRecords.length === 0" class="flex flex-col items-center gap-3 py-10">
-          <div class="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center"><Clock class="w-5 h-5 text-[#bbb]" /></div>
-          <span class="text-sm text-[#999]">当天暂无工作记录</span>
-        </div>
       </div>
-    </section>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.ya-menu-enter-active, .ya-menu-leave-active {
+  transition: opacity .15s ease, transform .15s ease;
+}
+.ya-menu-enter-from, .ya-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+</style>

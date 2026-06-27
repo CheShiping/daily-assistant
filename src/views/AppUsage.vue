@@ -10,6 +10,8 @@ import {
   type ChartOptions,
   type Plugin
 } from 'chart.js'
+import { safeCall } from '@/lib/utils'
+import { toast } from '@/lib/toast'
 
 Chart.register(...registerables)
 
@@ -22,13 +24,6 @@ interface AppRow {
 }
 
 const router = useRouter()
-
-const ranges = [
-  { k: 'today' as const, l: '今日' },
-  { k: 'week' as const, l: '本周' },
-  { k: 'month' as const, l: '本月' },
-  { k: 'custom' as const, l: '自定义' }
-]
 
 const range = ref<'today' | 'week' | 'month' | 'custom'>('today')
 const customStart = ref('')
@@ -96,7 +91,10 @@ async function load() {
       startISO = start.toISOString()
       endISO = end.toISOString()
     }
-    const raw = await window.api.appUsage.list({ startDate: startISO, endDate: endISO })
+    const raw = await safeCall(
+      () => window.api.appUsage.list({ startDate: startISO, endDate: endISO }),
+      [] as any[]
+    )
     items.value = raw
       .map(r => ({
         appName: r.appName,
@@ -141,10 +139,12 @@ async function loadInsight() {
       if (data.content) {
         insightText.value = data.content
         insightCache.set(key, data.content)
+        toast.success('AI 洞察完成')
       }
     } else if (data.status === 'failed') {
       insightLoading.value = false
       insightText.value = '生成失败：' + (data.error ?? '未知错误')
+      toast.error('洞察生成失败')
     }
   })
   try {
@@ -153,10 +153,12 @@ async function loadInsight() {
       appName: a.appName,
       durationMinutes: Math.round(a.durationSec / 60)
     }))
-    await window.api.ai.generateInsight({ type: 'appUsage', data: payload })
+    await safeCall(() => window.api.ai.generateInsight({ type: 'appUsage', data: payload }), null)
+    toast.info('AI 洞察生成中…')
   } catch (e: any) {
     insightLoading.value = false
     insightText.value = '生成失败：' + (e.message ?? '未知错误')
+    toast.error('洞察生成失败：' + (e?.message ?? '未知错误'))
   }
 }
 
@@ -164,6 +166,17 @@ function refreshInsight() {
   insightCache.delete(insightCacheKey())
   insightText.value = ''
   loadInsight()
+}
+
+// 自定义日期范围重置为今天
+function resetCustomRange() {
+  const d = new Date()
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  const today = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} 00:00`
+  const now = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} 23:59`
+  customStart.value = today
+  customEnd.value = now
+  load()
 }
 
 watch(range, (r) => {
@@ -279,58 +292,114 @@ const pieOptions: ChartOptions<'doughnut'> = {
 </script>
 
 <template>
-  <div class="p-6 px-7 pb-12 w-full h-full overflow-y-auto min-h-0">
+  <div class="p-6 px-7 max-w-[1280px] mx-auto pb-12 w-full h-full overflow-y-auto min-h-0">
     <!-- 顶栏：描述 + 日期切换按钮 -->
-    <div class="flex items-center justify-between mb-6">
-      <p class="text-sm text-[#999]">查看各应用使用时长分布，了解时间花费结构</p>
-      <div class="flex items-center gap-2">
-        <button v-for="r in ranges" :key="r.k" @click="range=r.k"
-          :class="['px-3 py-1.5 text-xs rounded-md border transition-colors',
-            range===r.k ? 'bg-black/[0.06] border-black/10 text-foreground' : 'border-black/5 text-[#999] hover:bg-black/[0.03]']">
-          {{ r.l }}
-        </button>
-      </div>
+    <div class="flex items-center justify-between mb-6 gap-4 flex-wrap">
+      <p class="text-sm text-muted-foreground">查看各应用使用时长分布，了解时间花费结构</p>
+      <q-btn-toggle
+        v-model="range"
+        spread
+        no-caps
+        unelevated
+        toggle-color="primary"
+        color="white"
+        text-color="foreground"
+        class="ya-qbtn-toggle ya-qbtn-toggle--wide"
+        :options="[
+          { label: '今日', value: 'today' },
+          { label: '本周', value: 'week' },
+          { label: '本月', value: 'month' },
+          { label: '自定义', value: 'custom' }
+        ]"
+      />
     </div>
 
-    <!-- 自定义日期范围 -->
-    <div v-if="range==='custom'" class="flex items-center gap-2 mb-4">
-      <input type="datetime-local" v-model="customStart" class="px-3 py-1.5 text-xs border border-black/10 rounded-md bg-transparent focus:outline-none focus:ring-1 focus:ring-black/10" />
-      <span class="text-xs text-[#999]">至</span>
-      <input type="datetime-local" v-model="customEnd" class="px-3 py-1.5 text-xs border border-black/10 rounded-md bg-transparent focus:outline-none focus:ring-1 focus:ring-black/10" />
-      <button @click="load" class="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90">查询</button>
+    <!-- 自定义日期范围（与 Heatmap/Timeline 卡片风格统一） -->
+    <div v-if="range==='custom'" class="card p-4 mb-5">
+      <div class="flex items-center gap-3 flex-wrap">
+        <span class="text-[11.5px] font-mono uppercase tracking-wider text-muted-foreground">日期范围</span>
+        <q-input
+          v-model="customStart"
+          outlined
+          dense
+          mask="####-##-## ##:##"
+          class="date-input"
+          placeholder="开始时间"
+        >
+          <template v-slot:append>
+            <q-icon name="event" class="cursor-pointer">
+              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                <q-date v-model="customStart" mask="YYYY-MM-DD HH:mm" minimal />
+              </q-popup-proxy>
+            </q-icon>
+          </template>
+        </q-input>
+        <span class="text-xs text-muted-foreground">至</span>
+        <q-input
+          v-model="customEnd"
+          outlined
+          dense
+          mask="####-##-## ##:##"
+          class="date-input"
+          placeholder="结束时间"
+        >
+          <template v-slot:append>
+            <q-icon name="event" class="cursor-pointer">
+              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                <q-date v-model="customEnd" mask="YYYY-MM-DD HH:mm" minimal />
+              </q-popup-proxy>
+            </q-icon>
+          </template>
+        </q-input>
+        <button
+          class="ml-auto text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+          @click="resetCustomRange"
+        >重置</button>
+        <button class="btn-primary btn-sm" @click="load">查询</button>
+      </div>
     </div>
 
     <!-- 三卡片：总应用数 / 总时长 / 日均时长 -->
     <div class="grid grid-cols-3 gap-4 mb-6">
-      <div class="rounded-xl border border-black/5 p-4 bg-white">
-        <div class="text-xs text-[#999] mb-1">总应用数</div>
-        <div class="text-lg font-semibold">{{ totalApps }}</div>
+      <div class="card p-4">
+        <div class="text-xs text-muted-foreground mb-1">总应用数</div>
+        <div class="text-lg font-semibold font-display">{{ totalApps }}</div>
       </div>
-      <div class="rounded-xl border border-black/5 p-4 bg-white">
-        <div class="text-xs text-[#999] mb-1">总时长</div>
-        <div class="text-lg font-semibold">{{ formatDuration(totalSec) }}</div>
+      <div class="card p-4">
+        <div class="text-xs text-muted-foreground mb-1">总时长</div>
+        <div class="text-lg font-semibold font-display">{{ formatDuration(totalSec) }}</div>
       </div>
-      <div class="rounded-xl border border-black/5 p-4 bg-white">
-        <div class="text-xs text-[#999] mb-1">日均时长</div>
-        <div class="text-lg font-semibold">{{ formatDuration(avgSec) }}</div>
+      <div class="card p-4">
+        <div class="text-xs text-muted-foreground mb-1">日均时长</div>
+        <div class="text-lg font-semibold font-display">{{ formatDuration(avgSec) }}</div>
       </div>
     </div>
 
     <!-- Top 20 图表卡片 -->
-    <div class="rounded-xl border border-black/5 p-4 bg-white mb-6">
+    <div class="card p-4 mb-6">
       <div class="flex items-center justify-between mb-4">
         <div class="text-sm font-medium">应用时长分布（Top 20）</div>
-        <div class="flex items-center gap-1 rounded-md border border-black/5 p-0.5">
-          <button @click="chartMode='bar'" :class="['px-2.5 py-1 text-xs rounded transition-colors', chartMode==='bar' ? 'bg-black/[0.06] text-foreground' : 'text-[#999] hover:bg-black/[0.03]']">柱状图</button>
-          <button @click="chartMode='pie'" :class="['px-2.5 py-1 text-xs rounded transition-colors', chartMode==='pie' ? 'bg-black/[0.06] text-foreground' : 'text-[#999] hover:bg-black/[0.03]']">饼图</button>
-        </div>
+        <q-btn-toggle
+          v-model="chartMode"
+          spread
+          no-caps
+          unelevated
+          toggle-color="primary"
+          color="white"
+          text-color="foreground"
+          class="ya-qbtn-toggle ya-qbtn-toggle--wide"
+          :options="[
+            { label: '柱状图', value: 'bar' },
+            { label: '饼图', value: 'pie' }
+          ]"
+        />
       </div>
       <!-- 加载 -->
-      <div v-if="loading" class="flex items-center justify-center h-64 gap-2 text-[#999]">
+      <div v-if="loading" class="flex items-center justify-center h-64 gap-2 text-muted-foreground">
         <Loader2 class="w-4 h-4 animate-spin" /> 加载中...
       </div>
       <!-- 空 -->
-      <div v-else-if="topApps.length === 0" class="flex items-center justify-center h-64 text-[#999] text-sm">暂无应用使用数据</div>
+      <div v-else-if="topApps.length === 0" class="flex items-center justify-center h-64 text-muted-foreground text-sm">暂无应用使用数据</div>
       <!-- 柱状图：Chart.js Bar 横向 -->
       <div v-else-if="chartMode==='bar'" :style="{ height: chartHeight + 'px' }">
         <Bar :data="barData" :options="barOptions" :plugins="[durationLabelsPlugin]" />
@@ -342,11 +411,11 @@ const pieOptions: ChartOptions<'doughnut'> = {
     </div>
 
     <!-- 详细列表 -->
-    <div class="rounded-xl border border-black/5 bg-white overflow-hidden">
-      <div class="px-4 py-3 border-b border-black/5 text-sm font-medium">详细列表</div>
+    <div class="card overflow-hidden">
+      <div class="px-4 py-3 border-b text-sm font-medium">详细列表</div>
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-black/5 text-[#999] text-xs">
+          <tr class="border-b text-muted-foreground text-xs">
             <th class="text-left px-4 py-2 font-medium">应用名称</th>
             <th class="text-right px-4 py-2 font-medium">使用时长</th>
             <th class="text-right px-4 py-2 font-medium">占比</th>
@@ -355,12 +424,12 @@ const pieOptions: ChartOptions<'doughnut'> = {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="app in topApps" :key="app.appName" class="border-b border-black/[0.03] hover:bg-black/[0.015] transition-colors">
+          <tr v-for="app in topApps" :key="app.appName" class="border-b hover:bg-muted/30 transition-colors">
             <td class="px-4 py-2.5">{{ app.appName }}</td>
-            <td class="px-4 py-2.5 text-right">{{ formatDuration(app.durationSec) }}</td>
-            <td class="px-4 py-2.5 text-right text-[#999]">{{ app.share }}%</td>
-            <td class="px-4 py-2.5 text-right text-[#999]">{{ formatDateTime(app.firstUsedAt) }}</td>
-            <td class="px-4 py-2.5 text-right text-[#999]">{{ formatDateTime(app.lastUsedAt) }}</td>
+            <td class="px-4 py-2.5 text-right font-mono">{{ formatDuration(app.durationSec) }}</td>
+            <td class="px-4 py-2.5 text-right text-muted-foreground font-mono">{{ app.share }}%</td>
+            <td class="px-4 py-2.5 text-right text-muted-foreground font-mono text-xs">{{ formatDateTime(app.firstUsedAt) }}</td>
+            <td class="px-4 py-2.5 text-right text-muted-foreground font-mono text-xs">{{ formatDateTime(app.lastUsedAt) }}</td>
           </tr>
         </tbody>
       </table>

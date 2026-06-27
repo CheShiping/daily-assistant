@@ -3,12 +3,14 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Shield, HardDrive, Camera, EyeOff, Lock, Check, Settings as SettingsIcon, Cpu } from 'lucide-vue-next'
 import type { AppSettings } from '@/types'
+import { safeCall, FALLBACK_SETTINGS } from '@/lib/utils'
 
 const router = useRouter()
-const settings = ref<AppSettings | null>(null)
+const settings = ref<AppSettings>({ ...FALLBACK_SETTINGS })
 
 async function load() {
-  settings.value = await window.api.settings.get()
+  const s = await safeCall(() => window.api.settings.get(), { ...FALLBACK_SETTINGS })
+  settings.value = { ...FALLBACK_SETTINGS, ...s }
 }
 
 onMounted(load)
@@ -43,7 +45,7 @@ const mechanisms = [
 </script>
 
 <template>
-  <div class="p-6 px-7 max-w-3xl mx-auto pb-12 w-full h-full overflow-y-auto min-h-0">
+  <div class="p-6 px-7 max-w-[1280px] mx-auto pb-12 w-full h-full overflow-y-auto min-h-0">
     <div class="text-center mb-8">
       <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
         <Shield class="w-6 h-6 text-primary" />

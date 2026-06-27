@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import type { WorkRecord } from '@/types'
-import { formatDate, formatTime, today } from '@/lib/utils'
+import { formatDate, formatTime, today, safeCall } from '@/lib/utils'
 import { Plus, Trash2, Pencil, Loader2, ChevronLeft, ChevronRight, Clock } from 'lucide-vue-next'
 
 const records = ref<WorkRecord[]>([])
@@ -46,8 +46,14 @@ const byCategory = computed(() => {
 
 async function load() {
   loading.value = true
-  records.value = await window.api.workRecords.list({ date: selectedDate.value })
-  loading.value = false
+  try {
+    records.value = await safeCall(
+      () => window.api.workRecords.list({ date: selectedDate.value }),
+      [] as WorkRecord[]
+    )
+  } finally {
+    loading.value = false
+  }
 }
 
 function prevDay() {
@@ -113,7 +119,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="p-6 px-7 max-w-5xl mx-auto w-full h-full overflow-y-auto min-h-0">
+  <div class="p-6 px-7 max-w-[1280px] mx-auto w-full h-full overflow-y-auto min-h-0">
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-2">
         <button class="btn-outline btn-icon" @click="prevDay"><ChevronLeft class="w-4 h-4" /></button>

@@ -56,7 +56,7 @@ async function openGithub() {
 </script>
 
 <template>
-  <div class="p-6 px-7 max-w-3xl mx-auto pb-12 w-full h-full overflow-y-auto min-h-0">
+  <div class="p-6 px-7 max-w-[1280px] mx-auto pb-12 w-full h-full overflow-y-auto min-h-0">
     <div class="text-center mb-8">
       <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
         <HelpCircle class="w-6 h-6 text-primary" />

@@ -127,6 +127,7 @@ body {
   border-radius: 999px;
   padding: 8px 16px;
   height: 36px;
+  cursor: pointer;
   transition: transform .25s var(--ease-spring), background-color .2s ease, box-shadow .25s var(--ease-spring), color .2s ease;
   position: relative;
   overflow: hidden;
@@ -338,4 +339,256 @@ textarea { min-height: 80px; }
     transition-duration: 0.01ms !important;
   }
   .reveal { animation: none; opacity: 1; }
+}
+
+/* === 全局 Toast 样式（Quasar Notify 皮肤） === */
+/* 关键：!important 覆盖 Quasar 内置 bg-positive/bg-negative 的预设色。
+   状态色由 toast.ts 注入到 .ya-toast-{type} 上。 */
+.ya-toast {
+  border-radius: 12px !important;
+  padding: 12px 16px !important;
+  min-height: 46px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  border: 1px solid transparent !important;
+  box-shadow: 0 10px 28px hsl(30 11% 16% / 0.10), 0 2px 6px hsl(30 11% 16% / 0.05) !important;
+  font-family: 'Inter Tight', 'Inter', system-ui, sans-serif !important;
+  letter-spacing: 0 !important;
+  backdrop-filter: blur(4px);
+}
+.ya-toast .q-notif__icon {
+  font-size: 20px !important;
+  margin-right: 9px !important;
+}
+.ya-toast .q-notif__message {
+  font-size: 13.5px !important;
+  line-height: 1.45 !important;
+  font-weight: 500 !important;
+}
+.ya-toast .q-notif__caption {
+  font-size: 12px !important;
+  opacity: 0.78;
+  margin-top: 2px !important;
+}
+.ya-toast .q-notif__progress {
+  height: 2px !important;
+  opacity: 0.55;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* 状态色：背景 + 文字 + 边框 + 进度条 + 关闭按钮 */
+.ya-toast-success {
+  background-color: hsl(142 55% 96%) !important;
+  color: hsl(142 60% 22%) !important;
+  border-color: hsl(142 40% 82%) !important;
+}
+.ya-toast-success .q-notif__progress { background-color: hsl(142 60% 42%) !important; }
+.ya-toast-success .q-notif__icon { color: hsl(142 60% 38%) !important; }
+
+.ya-toast-error {
+  background-color: hsl(16 80% 96%) !important;
+  color: hsl(16 75% 32%) !important;
+  border-color: hsl(16 50% 86%) !important;
+}
+.ya-toast-error .q-notif__progress { background-color: hsl(16 70% 50%) !important; }
+.ya-toast-error .q-notif__icon { color: hsl(16 70% 45%) !important; }
+
+.ya-toast-warning {
+  background-color: hsl(38 92% 94%) !important;
+  color: hsl(28 80% 28%) !important;
+  border-color: hsl(38 70% 84%) !important;
+}
+.ya-toast-warning .q-notif__progress { background-color: hsl(28 80% 48%) !important; }
+.ya-toast-warning .q-notif__icon { color: hsl(28 80% 42%) !important; }
+
+.ya-toast-info {
+  background-color: hsl(204 90% 95%) !important;
+  color: hsl(204 70% 26%) !important;
+  border-color: hsl(204 60% 84%) !important;
+}
+.ya-toast-info .q-notif__progress { background-color: hsl(204 70% 45%) !important; }
+.ya-toast-info .q-notif__icon { color: hsl(204 70% 40%) !important; }
+
+/* 关闭按钮 hover 强调 */
+.ya-toast .q-notif__btn--bottom-right,
+.ya-toast button[aria-label="Close"] {
+  opacity: 0.7;
+  transition: opacity .2s ease;
+}
+.ya-toast .q-notif__btn--bottom-right:hover,
+.ya-toast button[aria-label="Close"]:hover {
+  opacity: 1;
+}
+
+/* Quasar toggle / q-btn-toggle 等在 light 主题下边界 */
+.q-menu {
+  border-radius: 12px !important;
+}
+
+/* === DeepSeek 风格 Chat === */
+.ya-chat-stream {
+  background: linear-gradient(180deg,
+    hsl(27 60% 99%) 0%,
+    hsl(165 30% 99%) 100%);
+}
+.ya-chat-msg-user {
+  background: hsl(var(--primary)) !important;
+  color: hsl(27 92% 18%) !important;
+  border-radius: 14px 14px 4px 14px !important;
+}
+.ya-chat-msg-assistant {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 14px 14px 14px 4px !important;
+}
+.ya-chat-msg-assistant p { margin: 0.4em 0; }
+.ya-chat-msg-assistant code {
+  background: hsl(var(--muted));
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+}
+.ya-chat-msg-assistant pre {
+  background: hsl(0 0% 8%);
+  color: hsl(0 0% 95%);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+.ya-chat-msg-assistant pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* Chat 侧栏（对话历史） */
+.ya-history-item {
+  transition: background-color .15s ease, transform .15s ease;
+  cursor: pointer;
+}
+.ya-history-item:hover {
+  background: hsl(var(--accent));
+}
+.ya-history-item.active {
+  background: hsl(27 92% 95%);
+  color: hsl(27 92% 35%);
+  font-weight: 500;
+}
+
+/* Quasar q-checkbox 主色 */
+.ya-cb :deep(.q-checkbox__inner) {
+  color: hsl(var(--primary));
+}
+
+/* Quasar q-btn-toggle 主色（用于分类多选） */
+.ya-cat-toggle :deep(.q-btn) {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 4px 10px !important;
+  border-radius: 999px !important;
+  min-height: 26px !important;
+}
+.ya-cat-toggle :deep(.q-btn--unelevated) {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+.ya-cat-toggle :deep(.q-btn--unelevated:hover) {
+  background: hsl(var(--accent)) !important;
+  border-color: hsl(var(--primary) / 0.4) !important;
+  color: hsl(var(--foreground)) !important;
+}
+.ya-cat-toggle :deep(.q-btn-item) {
+  margin: 0 3px !important;
+}
+
+/* 全局 q-input 日期框皮肤（与 Reports/Heatmap 等保持一致） */
+.date-input :deep(.q-field__control) {
+  border-radius: 10px !important;
+  background: hsl(var(--background)) !important;
+  min-height: 36px !important;
+}
+.date-input :deep(.q-field__control):hover {
+  border-color: hsl(var(--muted-foreground) / 0.3) !important;
+}
+.date-input :deep(.q-field--focused .q-field__control) {
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.14) !important;
+  border-color: hsl(var(--primary)) !important;
+}
+.date-input :deep(.q-field__native),
+.date-input :deep(.q-field__input) {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 13px !important;
+  letter-spacing: 0.01em !important;
+}
+.date-input { width: 150px; }
+
+/* Quasar q-date 弹窗与主题一致 */
+:deep(.q-date) {
+  border-radius: 14px !important;
+  font-family: inherit !important;
+}
+:deep(.q-date__header) {
+  background: linear-gradient(135deg, hsl(27 92% 95%), hsl(165 21% 92%)) !important;
+}
+:deep(.q-date__today) {
+  color: hsl(27 92% 50%) !important;
+  font-weight: 700 !important;
+}
+:deep(.q-date__event) {
+  background: hsl(27 92% 63% / 0.2) !important;
+  color: hsl(27 92% 50%) !important;
+}
+
+/* q-btn-toggle 通用主题色（用于日期范围 / 图表切换） */
+.ya-qbtn-toggle :deep(.q-btn) {
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  padding: 0 14px !important;
+  min-height: 32px !important;
+  white-space: nowrap !important;
+  letter-spacing: 0.01em !important;
+}
+.ya-qbtn-toggle :deep(.q-btn--unelevated) {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  transition: all .2s ease !important;
+}
+.ya-qbtn-toggle :deep(.q-btn--unelevated:hover) {
+  background: hsl(var(--accent)) !important;
+  border-color: hsl(var(--primary) / 0.4) !important;
+  color: hsl(var(--foreground)) !important;
+}
+.ya-qbtn-toggle :deep(.q-btn-item) {
+  margin: 0 2px !important;
+}
+
+/* 宽松版本（4 按钮、柱状/饼图等需要更宽的内边距避免文字截断） */
+.ya-qbtn-toggle--wide :deep(.q-btn) {
+  padding: 0 20px !important;
+  min-width: 72px !important;
+  font-size: 13px !important;
+}
+
+/* q-toggle 主色 */
+.ya-toggle :deep(.q-toggle__inner) {
+  color: hsl(var(--primary)) !important;
+}
+
+/* 通用淡入/淡出过渡（X 按钮等） */
+.ya-fade-enter-active, .ya-fade-leave-active {
+  transition: opacity .2s ease, transform .2s var(--ease-spring);
+}
+.ya-fade-enter-from, .ya-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
 }

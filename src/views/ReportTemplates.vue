@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { marked } from 'marked'
 import type { ReportTemplate } from '@/types'
+import { safeCall } from '@/lib/utils'
 import { Loader2, Plus, Trash2, Pencil, Sparkles, Save, X } from 'lucide-vue-next'
 
 const templates = ref<ReportTemplate[]>([])
@@ -34,8 +35,11 @@ const renderedContent = computed(() => editor.value.content ? marked.parse(edito
 
 async function load() {
   loading.value = true
-  templates.value = await window.api.reportTemplates.list()
-  loading.value = false
+  try {
+    templates.value = await safeCall(() => window.api.reportTemplates.list(), [] as ReportTemplate[])
+  } finally {
+    loading.value = false
+  }
 }
 
 function openCreate() {
@@ -132,7 +136,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="p-6 px-7 max-w-5xl mx-auto w-full h-full overflow-y-auto min-h-0">
+  <div class="p-6 px-7 max-w-[1280px] mx-auto w-full h-full overflow-y-auto min-h-0">
     <!-- 错误提示 -->
     <div v-if="errorMessage" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground px-4 py-2 rounded-md shadow-lg text-sm flex items-center gap-2 transition-all">
       <span>{{ errorMessage }}</span>

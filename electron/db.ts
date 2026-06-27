@@ -142,80 +142,183 @@ export function getDb(): DBSchema {
   // 初始化内置模板
   if (d.templates.filter(t => t.isBuiltin).length === 0) {
     const now = new Date().toISOString()
+    // 5 个内置模板 + 1 个示例自定义模板
+    // 内容参考网上流行的日报 / 周报 / 月报格式
     const builtinTemplates: ReportTemplate[] = [
+      // ===== 日报 =====
       {
-        id: 'tpl-daily-default',
-        name: '标准日报模板',
+        id: 'tpl-daily-standard',
+        name: '标准日报',
         type: 'daily',
-        content: '# {{日期}} 工作日报\n\n## 今日完成\n{{今日完成}}\n\n## 关键数据\n{{关键数据}}\n\n## 遇到的问题\n{{遇到的问题}}\n\n## 明日计划\n{{明日计划}}',
+        content: `# {{日期}} 工作日报
+
+## 📌 今日完成
+{{今日完成}}
+
+## 📊 关键数据
+{{关键数据}}
+
+## ⚠️ 遇到的问题
+{{遇到的问题}}
+
+## 🎯 明日计划
+{{明日计划}}`,
         isBuiltin: true,
         clustering: 'timeline',
         createdAt: now,
         updatedAt: now
       },
       {
-        id: 'tpl-daily-simple',
-        name: '简洁日报',
+        id: 'tpl-daily-scrum',
+        name: '敏捷冲刺日报',
         type: 'daily',
-        content: '# {{日期}} 工作日报\n\n## 已完成\n{{今日完成}}\n\n## 未完成\n{{遇到的问题}}\n\n## 明日计划\n{{明日计划}}',
+        content: `# {{日期}} · Sprint 冲刺日报
+
+## ✅ 昨日完成
+- [ ] {{昨日任务 1}}
+- [ ] {{昨日任务 2}}
+- [ ] {{昨日任务 3}}
+
+## 🔄 今日计划
+- [ ] {{今日任务 1}}
+- [ ] {{今日任务 2}}
+- [ ] {{今日任务 3}}
+
+## 🚧 阻碍 / 风险
+{{阻碍描述}}
+
+## 💡 需要协助
+{{协助内容（无则填"无"）}}`,
         isBuiltin: true,
         clustering: 'category',
         createdAt: now,
         updatedAt: now
       },
       {
-        id: 'tpl-daily-tech',
-        name: '技术日报',
+        id: 'tpl-daily-result',
+        name: '成果型日报',
         type: 'daily',
-        content: '# {{日期}} 技术日报\n\n## 开发进展\n{{今日完成}}\n\n## 技术问题与解决方案\n{{关键数据}}\n\n## 代码质量\n{{遇到的问题}}\n\n## 明日技术计划\n{{明日计划}}',
-        isBuiltin: true,
-        clustering: 'category',
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: 'tpl-daily-project',
-        name: '项目日报',
-        type: 'daily',
-        content: '# {{日期}} 项目日报\n\n## 项目进展\n{{今日完成}}\n\n## 里程碑状态\n{{关键数据}}\n\n## 风险与阻塞\n{{遇到的问题}}\n\n## 下一步\n{{明日计划}}',
+        content: `# {{日期}} 工作日报（成果导向）
+
+## 🌟 核心成果
+{{今日完成}}
+
+## 📈 数据指标
+| 维度 | 数值 | 变化 |
+|------|------|------|
+| {{指标 1}} | {{数值}} | {{变化}} |
+| {{指标 2}} | {{数值}} | {{变化}} |
+
+## 💭 思考与沉淀
+{{关键数据}}
+
+## 🔥 风险与机会
+{{遇到的问题}}
+
+## 📅 明日聚焦
+{{明日计划}}`,
         isBuiltin: true,
         clustering: 'project',
         createdAt: now,
         updatedAt: now
       },
+
+      // ===== 周报 =====
       {
-        id: 'tpl-daily-pomodoro',
-        name: '番茄钟聚类',
-        type: 'daily',
-        content: '# {{日期}} 工作日报\n\n## 工作时间块\n{{今日完成}}\n\n## 效率分析\n{{关键数据}}\n\n## 明日计划\n{{明日计划}}',
-        isBuiltin: true,
-        clustering: 'timeline',
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: 'tpl-weekly-default',
-        name: '标准周报模板',
+        id: 'tpl-weekly-standard',
+        name: '标准周报',
         type: 'weekly',
-        content: '# {{起始}} - {{结束}} 工作周报\n\n## 本周完成\n{{本周完成}}\n\n## 关键成果\n{{关键成果}}\n\n## 问题与风险\n{{问题与风险}}\n\n## 下周计划\n{{下周计划}}',
+        content: `# {{起始}} - {{结束}} 工作周报
+
+## 📋 本周概览
+{{本周概览}}
+
+## ✅ 本周完成
+{{本周完成}}
+
+## 🏆 关键成果
+{{关键成果}}
+
+## 📊 数据分析
+{{数据分析}}
+
+## ⚠️ 问题与风险
+{{问题与风险}}
+
+## 🎯 下周计划
+{{下周计划}}`,
         isBuiltin: true,
-        clustering: 'timeline',
+        clustering: 'category',
         createdAt: now,
         updatedAt: now
       },
+
+      // ===== 月报 =====
       {
-        id: 'tpl-monthly-default',
-        name: '标准月报模板',
+        id: 'tpl-monthly-okr',
+        name: 'OKR 月度复盘',
         type: 'monthly',
-        content: '# {{月份}} 工作月报\n\n## 本月完成\n{{本月完成}}\n\n## 关键数据\n{{关键数据}}\n\n## 复盘与改进\n{{复盘与改进}}\n\n## 下月计划\n{{下月计划}}',
+        content: `# {{月份}} OKR 月度复盘
+
+## 🎯 本月 OKR 进展
+
+### O1 · {{目标 1}}
+- KR1: {{关键结果 1}} —— 进度 {{百分比 1}}%
+- KR2: {{关键结果 2}} —— 进度 {{百分比 2}}%
+
+### O2 · {{目标 2}}
+- KR1: {{关键结果 3}} —— 进度 {{百分比 3}}%
+
+## 🏆 关键成果
+{{本月完成}}
+
+## 📊 关键数据
+{{关键数据}}
+
+## 🔍 复盘与改进
+### 做得好
+{{做得好的方面}}
+
+### 待改进
+{{待改进的方面}}
+
+## 🎯 下月计划
+{{下月计划}}`,
         isBuiltin: true,
-        clustering: 'timeline',
+        clustering: 'project',
         createdAt: now,
         updatedAt: now
       }
     ]
+
+    // 1 个示例自定义模板（用户可作为起点编辑）
+    const sampleCustom: ReportTemplate = {
+      id: 'tpl-custom-sample',
+      name: '我的自定义模板（示例）',
+      type: 'daily',
+      content: `# {{日期}} · {{汇报对象}}日报
+
+## 一、核心进展
+{{今日完成}}
+
+## 二、关键产出
+{{关键数据}}
+
+## 三、风险与依赖
+{{遇到的问题}}
+
+## 四、明日计划
+{{明日计划}}
+
+> 自定义说明：可编辑占位符、调整章节顺序、保存为新模板。`,
+      isBuiltin: false,
+      clustering: 'timeline',
+      createdAt: now,
+      updatedAt: now
+    }
+
     // 只添加不存在的模板（避免重复 seed）
-    for (const t of builtinTemplates) {
+    for (const t of [...builtinTemplates, sampleCustom]) {
       if (!d.templates.find(x => x.id === t.id)) d.templates.push(t)
     }
     save()
@@ -224,48 +327,122 @@ export function getDb(): DBSchema {
     const now = new Date().toISOString()
     const builtinToAdd: ReportTemplate[] = [
       {
-        id: 'tpl-daily-simple',
-        name: '简洁日报',
+        id: 'tpl-daily-scrum',
+        name: '敏捷冲刺日报',
         type: 'daily',
-        content: '# {{日期}} 工作日报\n\n## 已完成\n{{今日完成}}\n\n## 未完成\n{{遇到的问题}}\n\n## 明日计划\n{{明日计划}}',
+        content: `# {{日期}} · Sprint 冲刺日报
+
+## ✅ 昨日完成
+- [ ] {{昨日任务 1}}
+- [ ] {{昨日任务 2}}
+- [ ] {{昨日任务 3}}
+
+## 🔄 今日计划
+- [ ] {{今日任务 1}}
+- [ ] {{今日任务 2}}
+- [ ] {{今日任务 3}}
+
+## 🚧 阻碍 / 风险
+{{阻碍描述}}
+
+## 💡 需要协助
+{{协助内容（无则填"无"）}}`,
         isBuiltin: true,
         clustering: 'category',
         createdAt: now,
         updatedAt: now
       },
       {
-        id: 'tpl-daily-tech',
-        name: '技术日报',
+        id: 'tpl-daily-result',
+        name: '成果型日报',
         type: 'daily',
-        content: '# {{日期}} 技术日报\n\n## 开发进展\n{{今日完成}}\n\n## 技术问题与解决方案\n{{关键数据}}\n\n## 代码质量\n{{遇到的问题}}\n\n## 明日技术计划\n{{明日计划}}',
-        isBuiltin: true,
-        clustering: 'category',
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: 'tpl-daily-project',
-        name: '项目日报',
-        type: 'daily',
-        content: '# {{日期}} 项目日报\n\n## 项目进展\n{{今日完成}}\n\n## 里程碑状态\n{{关键数据}}\n\n## 风险与阻塞\n{{遇到的问题}}\n\n## 下一步\n{{明日计划}}',
+        content: `# {{日期}} 工作日报（成果导向）
+
+## 🌟 核心成果
+{{今日完成}}
+
+## 📈 数据指标
+| 维度 | 数值 | 变化 |
+|------|------|------|
+| {{指标 1}} | {{数值}} | {{变化}} |
+| {{指标 2}} | {{数值}} | {{变化}} |
+
+## 💭 思考与沉淀
+{{关键数据}}
+
+## 🔥 风险与机会
+{{遇到的问题}}
+
+## 📅 明日聚焦
+{{明日计划}}`,
         isBuiltin: true,
         clustering: 'project',
         createdAt: now,
         updatedAt: now
       },
       {
-        id: 'tpl-daily-pomodoro',
-        name: '番茄钟聚类',
-        type: 'daily',
-        content: '# {{日期}} 工作日报\n\n## 工作时间块\n{{今日完成}}\n\n## 效率分析\n{{关键数据}}\n\n## 明日计划\n{{明日计划}}',
+        id: 'tpl-monthly-okr',
+        name: 'OKR 月度复盘',
+        type: 'monthly',
+        content: `# {{月份}} OKR 月度复盘
+
+## 🎯 本月 OKR 进展
+
+### O1 · {{目标 1}}
+- KR1: {{关键结果 1}} —— 进度 {{百分比 1}}%
+- KR2: {{关键结果 2}} —— 进度 {{百分比 2}}%
+
+### O2 · {{目标 2}}
+- KR1: {{关键结果 3}} —— 进度 {{百分比 3}}%
+
+## 🏆 关键成果
+{{本月完成}}
+
+## 📊 关键数据
+{{关键数据}}
+
+## 🔍 复盘与改进
+### 做得好
+{{做得好的方面}}
+
+### 待改进
+{{待改进的方面}}
+
+## 🎯 下月计划
+{{下月计划}}`,
         isBuiltin: true,
-        clustering: 'timeline',
+        clustering: 'project',
         createdAt: now,
         updatedAt: now
       }
     ]
+    // 补全示例自定义模板
+    const sampleCustom: ReportTemplate = {
+      id: 'tpl-custom-sample',
+      name: '我的自定义模板（示例）',
+      type: 'daily',
+      content: `# {{日期}} · {{汇报对象}}日报
+
+## 一、核心进展
+{{今日完成}}
+
+## 二、关键产出
+{{关键数据}}
+
+## 三、风险与依赖
+{{遇到的问题}}
+
+## 四、明日计划
+{{明日计划}}
+
+> 自定义说明：可编辑占位符、调整章节顺序、保存为新模板。`,
+      isBuiltin: false,
+      clustering: 'timeline',
+      createdAt: now,
+      updatedAt: now
+    }
     let added = false
-    for (const t of builtinToAdd) {
+    for (const t of [...builtinToAdd, sampleCustom]) {
       if (!d.templates.find(x => x.id === t.id)) {
         d.templates.push(t)
         added = true

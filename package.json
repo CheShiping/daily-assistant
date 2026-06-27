@@ -1,7 +1,7 @@
 {
   "name": "daily-assistant",
   "private": false,
-  "version": "2.0.0",
+  "version": "2.1.1",
   "description": "牙牙乐日报助手 - 基于自有 API Key 的开源工作日报生成工具",
   "author": "",
   "main": "dist-electron/main.cjs",
@@ -28,6 +28,7 @@
     "@types/node": "^22.9.0",
     "@vitejs/plugin-vue": "^5.2.0",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^10.1.0",
     "electron": "^28.0.0",
     "electron-builder": "^25.1.8",
     "postcss": "^8.4.49",
@@ -45,8 +46,8 @@
     "productName": "牙牙乐日报助手",
     "afterPack": "build/afterPack.cjs",
     "directories": {
-      "output": "release"
-    },
+        "output": "release_v2_1_6"
+      },
     "files": [
       "dist/**/*",
       "dist-electron/**/*"

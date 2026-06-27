@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { marked } from 'marked'
 import type { Report } from '@/types'
-import { formatDateTime } from '@/lib/utils'
+import { formatDateTime, safeCall } from '@/lib/utils'
 import {
   Loader2, FileText, Trash2, Edit3, Eye, Download, ArrowLeft,
   PencilLine, Save, X, Search
@@ -21,16 +21,19 @@ const searchQuery = ref('')
 
 async function load() {
   loading.value = true
-  reports.value = await window.api.reports.list({ limit: 200 })
-  // 从 query 自动选中
-  const id = route.query.id as string
-  if (id) {
-    const r = reports.value.find(x => x.id === id)
-    if (r) selectReport(r)
-  } else if (reports.value.length > 0) {
-    selectReport(reports.value[0])
+  try {
+    reports.value = await safeCall(() => window.api.reports.list({ limit: 200 }), [] as Report[])
+    // 从 query 自动选中
+    const id = route.query.id as string
+    if (id) {
+      const r = reports.value.find(x => x.id === id)
+      if (r) selectReport(r)
+    } else if (reports.value.length > 0) {
+      selectReport(reports.value[0])
+    }
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 }
 
 function selectReport(r: Report) {
@@ -88,7 +91,6 @@ onMounted(load)
     <div class="w-72 border-r flex flex-col flex-shrink-0">
       <div class="p-3 border-b">
         <div class="relative">
-          <Search class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input v-model="searchQuery" class="input h-8 pl-7 w-full" placeholder="搜索报告..." />
         </div>
       </div>

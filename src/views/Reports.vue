@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { marked } from 'marked'
+import { isApiReady, safeCall, formatDate, formatDateTime, relativeTime, today } from '@/lib/utils'
 import type { Report, ReportTemplate, WorkRecord } from '@/types'
-import { formatDate, formatDateTime, relativeTime, today, todayISO, endOfTodayISO } from '@/lib/utils'
+import { toast } from '@/lib/toast'
 import { Loader2, Trash2, Download, FileText, Sparkles, ChevronLeft, Pencil, Check, Eye, Edit3, Save } from 'lucide-vue-next'
 
 marked.setOptions({ breaks: true, gfm: true })
@@ -74,11 +75,14 @@ async function computeRecommendation() {
     start.setHours(0, 0, 0, 0)
     const end = new Date(form.value.endDate)
     end.setHours(23, 59, 59, 999)
-    const recs = await window.api.workRecords.list({
-      startDate: start.toISOString(),
-      endDate: end.toISOString(),
-      limit: 500
-    })
+    const recs = await safeCall(
+      () => window.api.workRecords.list({
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        limit: 500
+      }),
+      [] as WorkRecord[]
+    )
     if (recs.length === 0) {
       recommendedTemplateId.value = ''
       return
@@ -93,15 +97,14 @@ async function computeRecommendation() {
     const commRatio = ((counts['会议'] ?? 0) + (counts['沟通'] ?? 0)) / total
 
     if (devRatio > 0.5) {
-      recommendedTemplateId.value = 'tpl-daily-tech'
+      recommendedTemplateId.value = 'tpl-daily-scrum'
     } else if (commRatio > 0.4) {
-      recommendedTemplateId.value = 'tpl-daily-simple'
+      recommendedTemplateId.value = 'tpl-daily-standard'
     } else if (Object.keys(counts).length > 3) {
-      recommendedTemplateId.value = 'tpl-daily-project'
+      recommendedTemplateId.value = 'tpl-daily-result'
     } else {
-      recommendedTemplateId.value = 'tpl-daily-default'
+      recommendedTemplateId.value = 'tpl-daily-standard'
     }
-    // 若推荐模板不在可选列表中，清空
     if (!filteredTemplates.value.find(t => t.id === recommendedTemplateId.value)) {
       recommendedTemplateId.value = ''
     }
@@ -116,15 +119,186 @@ const renderedContent = computed(() => {
   return marked.parse(content) as string
 })
 
+// 5+1 模板 fallback（dev 模式 / IPC 不可用时使用，与 electron/db.ts 保持一致）
+const FALLBACK_TEMPLATES: ReportTemplate[] = [
+  {
+    id: 'tpl-daily-standard',
+    name: '标准日报',
+    type: 'daily',
+    content: `# {{日期}} 工作日报
+
+## 📌 今日完成
+{{今日完成}}
+
+## 📊 关键数据
+{{关键数据}}
+
+## ⚠️ 遇到的问题
+{{遇到的问题}}
+
+## 🎯 明日计划
+{{明日计划}}`,
+    isBuiltin: true,
+    clustering: 'timeline',
+    createdAt: '2026-06-28T00:00:00.000Z',
+    updatedAt: '2026-06-28T00:00:00.000Z'
+  },
+  {
+    id: 'tpl-daily-scrum',
+    name: '敏捷冲刺日报',
+    type: 'daily',
+    content: `# {{日期}} · Sprint 冲刺日报
+
+## ✅ 昨日完成
+- [ ] {{昨日任务 1}}
+- [ ] {{昨日任务 2}}
+- [ ] {{昨日任务 3}}
+
+## 🔄 今日计划
+- [ ] {{今日任务 1}}
+- [ ] {{今日任务 2}}
+- [ ] {{今日任务 3}}
+
+## 🚧 阻碍 / 风险
+{{阻碍描述}}
+
+## 💡 需要协助
+{{协助内容（无则填"无"）}}`,
+    isBuiltin: true,
+    clustering: 'category',
+    createdAt: '2026-06-28T00:00:00.000Z',
+    updatedAt: '2026-06-28T00:00:00.000Z'
+  },
+  {
+    id: 'tpl-daily-result',
+    name: '成果型日报',
+    type: 'daily',
+    content: `# {{日期}} 工作日报（成果导向）
+
+## 🌟 核心成果
+{{今日完成}}
+
+## 📈 数据指标
+| 维度 | 数值 | 变化 |
+|------|------|------|
+| {{指标 1}} | {{数值}} | {{变化}} |
+| {{指标 2}} | {{数值}} | {{变化}} |
+
+## 💭 思考与沉淀
+{{关键数据}}
+
+## 🔥 风险与机会
+{{遇到的问题}}
+
+## 📅 明日聚焦
+{{明日计划}}`,
+    isBuiltin: true,
+    clustering: 'project',
+    createdAt: '2026-06-28T00:00:00.000Z',
+    updatedAt: '2026-06-28T00:00:00.000Z'
+  },
+  {
+    id: 'tpl-weekly-standard',
+    name: '标准周报',
+    type: 'weekly',
+    content: `# {{起始}} - {{结束}} 工作周报
+
+## 📋 本周概览
+{{本周概览}}
+
+## ✅ 本周完成
+{{本周完成}}
+
+## 🏆 关键成果
+{{关键成果}}
+
+## 📊 数据分析
+{{数据分析}}
+
+## ⚠️ 问题与风险
+{{问题与风险}}
+
+## 🎯 下周计划
+{{下周计划}}`,
+    isBuiltin: true,
+    clustering: 'category',
+    createdAt: '2026-06-28T00:00:00.000Z',
+    updatedAt: '2026-06-28T00:00:00.000Z'
+  },
+  {
+    id: 'tpl-monthly-okr',
+    name: 'OKR 月度复盘',
+    type: 'monthly',
+    content: `# {{月份}} OKR 月度复盘
+
+## 🎯 本月 OKR 进展
+
+### O1 · {{目标 1}}
+- KR1: {{关键结果 1}} —— 进度 {{百分比 1}}%
+- KR2: {{关键结果 2}} —— 进度 {{百分比 2}}%
+
+### O2 · {{目标 2}}
+- KR1: {{关键结果 3}} —— 进度 {{百分比 3}}%
+
+## 🏆 关键成果
+{{本月完成}}
+
+## 📊 关键数据
+{{关键数据}}
+
+## 🔍 复盘与改进
+### 做得好
+{{做得好的方面}}
+
+### 待改进
+{{待改进的方面}}
+
+## 🎯 下月计划
+{{下月计划}}`,
+    isBuiltin: true,
+    clustering: 'project',
+    createdAt: '2026-06-28T00:00:00.000Z',
+    updatedAt: '2026-06-28T00:00:00.000Z'
+  },
+  {
+    id: 'tpl-custom-sample',
+    name: '我的自定义模板（示例）',
+    type: 'daily',
+    content: `# {{日期}} · {{汇报对象}}日报
+
+## 一、核心进展
+{{今日完成}}
+
+## 二、关键产出
+{{关键数据}}
+
+## 三、风险与依赖
+{{遇到的问题}}
+
+## 四、明日计划
+{{明日计划}}
+
+> 自定义说明：可编辑占位符、调整章节顺序、保存为新模板。`,
+    isBuiltin: false,
+    clustering: 'timeline',
+    createdAt: '2026-06-28T00:00:00.000Z',
+    updatedAt: '2026-06-28T00:00:00.000Z'
+  }
+]
+
 async function load() {
   loading.value = true
-  const [r, t] = await Promise.all([
-    window.api.reports.list({ limit: 100 }),
-    window.api.reportTemplates.list()
-  ])
-  reports.value = r
-  templates.value = t
-  loading.value = false
+  try {
+    const [r, t] = await Promise.all([
+      safeCall(() => window.api.reports.list({ limit: 100 }), [] as Report[]),
+      safeCall(() => window.api.reportTemplates.list(), FALLBACK_TEMPLATES)
+    ])
+    reports.value = r
+    // 模板兜底：IPC 返回空时用 fallback（dev 模式）
+    templates.value = t && t.length > 0 ? t : FALLBACK_TEMPLATES
+  } finally {
+    loading.value = false
+  }
 }
 
 async function loadRecords(): Promise<WorkRecord[]> {
@@ -132,11 +306,14 @@ async function loadRecords(): Promise<WorkRecord[]> {
   start.setHours(0, 0, 0, 0)
   const end = new Date(form.value.endDate)
   end.setHours(23, 59, 59, 999)
-  return window.api.workRecords.list({
-    startDate: start.toISOString(),
-    endDate: end.toISOString(),
-    limit: 500
-  })
+  return safeCall(
+    () => window.api.workRecords.list({
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      limit: 500
+    }),
+    [] as WorkRecord[]
+  )
 }
 
 function openGenerate() {
@@ -152,7 +329,6 @@ function openGenerate() {
   streamingContent.value = ''
   generatingId.value = null
   computeRecommendation().then(() => {
-    // 若用户尚未选模板，自动套用推荐模板
     if (!form.value.templateId && recommendedTemplateId.value) {
       form.value.templateId = recommendedTemplateId.value
     }
@@ -170,20 +346,27 @@ function onFormChange() {
 }
 
 async function generate() {
+  if (!isApiReady()) {
+    showError('Electron 未启动，无法生成报告')
+    return
+  }
   const records = await loadRecords()
   if (records.length === 0) {
     showError('所选日期范围内没有工作记录，无法生成报告')
     return
   }
-  const settings = await window.api.settings.get()
+  const settings = await safeCall(() => window.api.settings.get(), null as any)
   const tpl = form.value.templateId ? templates.value.find(t => t.id === form.value.templateId) : null
 
   // 拉取今日计划注入到日报
   let plans: Array<{ text: string; completed: boolean }> = []
   if (form.value.type === 'daily') {
     try {
-      const planList = await window.api.plans.list({ date: form.value.startDate })
-      plans = planList.map(p => ({ text: p.text, completed: p.completed }))
+      const planList = await safeCall(
+        () => window.api.plans.list({ date: form.value.startDate }),
+        [] as any[]
+      )
+      plans = planList.map((p: any) => ({ text: p.text, completed: p.completed }))
     } catch {
       plans = []
     }
@@ -201,7 +384,7 @@ async function generate() {
     clustering: tpl?.clustering ?? 'timeline',
     plans: plans.length > 0 ? plans : undefined,
     customInstruction: form.value.customInstruction || undefined,
-    memoryContent: form.value.useMemory ? settings.memoryContent : undefined,
+    memoryContent: form.value.useMemory ? settings?.memoryContent : undefined,
     records: records.map(r => ({
       startedAt: r.startedAt,
       summary: r.summary,
@@ -209,29 +392,34 @@ async function generate() {
     }))
   }
 
-  const res = await window.api.ai.generateReport(input)
-  generatingId.value = res.id
+  try {
+    const res = await window.api.ai.generateReport(input)
+    generatingId.value = res.id
 
-  // 订阅流式
-  unsubStream = window.api.ai.onReportStreamChunk((data) => {
-    if (data.id === generatingId.value) {
-      streamingContent.value += data.chunk
-    }
-  })
-  unsubStatus = window.api.ai.onReportStatusChanged(async (data) => {
-    if (data.id === generatingId.value) {
-      generating.value = false
-      if (data.status === 'completed') {
-        await load()
-        const r = reports.value.find(x => x.id === data.id)
-        if (r) selectedReport.value = r
-      } else if (data.status === 'failed') {
-        showError('生成失败：' + (data.error ?? '未知错误'))
+    unsubStream = window.api.ai.onReportStreamChunk((data) => {
+      if (data.id === generatingId.value) {
+        streamingContent.value += data.chunk
       }
-      unsubStream?.()
-      unsubStatus?.()
-    }
-  })
+    })
+    unsubStatus = window.api.ai.onReportStatusChanged(async (data) => {
+      if (data.id === generatingId.value) {
+        generating.value = false
+        if (data.status === 'completed') {
+          await load()
+          const r = reports.value.find(x => x.id === data.id)
+          if (r) selectedReport.value = r
+          toast.success('报告生成完成')
+        } else if (data.status === 'failed') {
+          showError('生成失败：' + (data.error ?? '未知错误'))
+        }
+        unsubStream?.()
+        unsubStatus?.()
+      }
+    })
+  } catch (e: any) {
+    generating.value = false
+    showError('生成失败：' + (e?.message ?? '未知错误'))
+  }
 }
 
 function viewReport(r: Report) {
@@ -244,15 +432,19 @@ function backToList() {
 }
 
 async function deleteReport(id: string) {
+  if (!isApiReady()) return showError('Electron 未启动')
   if (!confirm('确认删除这份报告？')) return
   await window.api.reports.delete(id)
   if (selectedReport.value?.id === id) selectedReport.value = null
   await load()
+  toast.success('报告已删除')
 }
 
 async function exportReport(r: Report) {
+  if (!isApiReady()) return showError('Electron 未启动')
   const res = await window.api.reports.exportToFile(r.id, 'md')
   if (!res.ok && res.message) showError(res.message)
+  else toast.success('已导出为 ' + (res.path ?? '文件'))
 }
 
 function startEditTitle() {
@@ -262,12 +454,13 @@ function startEditTitle() {
 }
 
 async function saveTitle() {
-  if (!selectedReport.value) return
+  if (!selectedReport.value || !isApiReady()) return
   await window.api.reports.updateTitle(selectedReport.value.id, titleDraft.value)
   selectedReport.value.title = titleDraft.value
   const r = reports.value.find(x => x.id === selectedReport.value!.id)
   if (r) r.title = titleDraft.value
   editingTitle.value = false
+  toast.success('标题已更新')
 }
 
 function startEditContent() {
@@ -282,7 +475,7 @@ function cancelEditContent() {
 }
 
 async function saveContent() {
-  if (!selectedReport.value) return
+  if (!selectedReport.value || !isApiReady()) return
   savingContent.value = true
   try {
     await window.api.reports.updateContent(selectedReport.value.id, contentDraft.value)
@@ -303,12 +496,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="p-6 px-7 max-w-[1320px] mx-auto w-full h-full overflow-y-auto min-h-0">
-    <!-- 错误提示 -->
-    <div v-if="errorMessage" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground px-4 py-2 rounded-md shadow-lg text-sm flex items-center gap-2 transition-all">
-      <span>{{ errorMessage }}</span>
-    </div>
-
+  <div class="p-6 px-7 max-w-[1280px] mx-auto w-full h-full overflow-y-auto min-h-0">
     <!-- 报告详情视图 -->
     <template v-if="selectedReport">
       <div class="flex items-center gap-3 mb-4">
@@ -342,7 +530,7 @@ onUnmounted(() => {
       </div>
 
       <!-- 左右分栏：编辑模式时左侧编辑器 + 右侧预览；预览模式时全宽预览 -->
-      <div v-if="editMode" class="grid grid-cols-2 gap-4 h-[calc(100vh-220px)]">
+      <div v-if="editMode" class="grid grid-cols-2 gap-4" style="height: calc(100vh - 220px);">
         <div class="card p-0 overflow-hidden flex flex-col">
           <div class="flex items-center gap-2 px-4 py-2 border-b bg-muted/30 text-xs text-muted-foreground">
             <Edit3 class="w-3.5 h-3.5" />
@@ -366,12 +554,12 @@ onUnmounted(() => {
       <div v-else class="card p-6 markdown-body" v-html="renderedContent"></div>
     </template>
 
-    <!-- 列表视图 · 两栏：左侧配置 sticky，右侧历史报告铺满 -->
+    <!-- 列表视图 · 单栏铺满：上方配置 + 下方历史报告 -->
     <template v-else>
       <div class="flex items-center justify-between mb-6">
         <div>
-          <h1 class="font-display text-[26px] font-bold tracking-tight">报告</h1>
-          <p class="text-xs text-muted-foreground mt-1">配置左侧参数后点击生成，AI 自动撰写报告</p>
+          <h1 class="font-display text-[26px] font-bold tracking-tight">生成报告</h1>
+          <p class="text-xs text-muted-foreground mt-1">配置参数后点击生成，AI 自动撰写报告</p>
         </div>
         <button class="btn-primary" @click="openGenerate" :disabled="generating">
           <Sparkles v-if="!generating" class="w-4 h-4" />
@@ -380,14 +568,11 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <div class="grid grid-cols-12 gap-5">
-        <!-- 左侧 · 配置 sticky -->
-        <div class="col-span-12 lg:col-span-5 xl:col-span-4">
-          <div class="card p-5 space-y-4 lg:sticky lg:top-0">
-            <div>
-              <h3 class="font-display text-[15px] font-semibold mb-1">报告配置</h3>
-              <p class="text-xs text-muted-foreground">参数会同步到右侧历史记录</p>
-            </div>
+      <!-- 配置区 · 铺满整宽 -->
+      <div class="card p-6 mb-6">
+        <div class="grid grid-cols-12 gap-5">
+          <!-- 左列：报告类型 + 日期 + 模板 -->
+          <div class="col-span-12 lg:col-span-7 space-y-4">
             <div>
               <label class="label mb-1.5 block text-muted-foreground text-[11.5px] font-mono uppercase tracking-wider">报告类型</label>
               <q-btn-toggle
@@ -410,7 +595,7 @@ onUnmounted(() => {
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="label mb-1.5 block text-muted-foreground text-[11.5px] font-mono uppercase tracking-wider">开始日期</label>
-                <q-input v-model="form.startDate" outlined dense mask="####-##-##" :rules="['date']" class="date-input">
+                <q-input v-model="form.startDate" outlined dense mask="####-##-##" class="date-input">
                   <template v-slot:append>
                     <q-icon name="event" class="cursor-pointer">
                       <q-popup-proxy cover transition-show="scale" transition-hide="scale">
@@ -422,7 +607,7 @@ onUnmounted(() => {
               </div>
               <div>
                 <label class="label mb-1.5 block text-muted-foreground text-[11.5px] font-mono uppercase tracking-wider">结束日期</label>
-                <q-input v-model="form.endDate" outlined dense mask="####-##-##" :rules="['date']" class="date-input">
+                <q-input v-model="form.endDate" outlined dense mask="####-##-##" class="date-input">
                   <template v-slot:append>
                     <q-icon name="event" class="cursor-pointer">
                       <q-popup-proxy cover transition-show="scale" transition-hide="scale">
@@ -473,15 +658,22 @@ onUnmounted(() => {
                 >该类型暂无模板</button>
               </div>
             </div>
+          </div>
+
+          <!-- 右列：自定义指令 + 记忆 + 开始生成 -->
+          <div class="col-span-12 lg:col-span-5 space-y-4">
             <div>
               <label class="label mb-1.5 block text-muted-foreground text-[11.5px] font-mono uppercase tracking-wider">自定义指令（可选）</label>
-              <textarea v-model="form.customInstruction" class="textarea" rows="3" placeholder="例如：突出数据成果，简洁风格"></textarea>
+              <textarea v-model="form.customInstruction" class="textarea" rows="4" placeholder="例如：突出数据成果，简洁风格"></textarea>
             </div>
-            <label class="flex items-center gap-2 text-sm cursor-pointer select-none">
-              <input type="checkbox" v-model="form.useMemory" class="size-4 accent-primary cursor-pointer" />
-              <span>使用个人工作记忆</span>
-            </label>
-            <div class="flex justify-end pt-1">
+            <div class="flex items-center justify-between p-3 rounded-[10px] border border-border">
+              <div>
+                <div class="text-sm font-medium">使用个人工作记忆</div>
+                <div class="text-xs text-muted-foreground mt-0.5">将设置中的 AI 记忆内容注入提示词</div>
+              </div>
+              <q-toggle v-model="form.useMemory" color="primary" keep-color />
+            </div>
+            <div class="flex justify-end">
               <button class="btn-primary btn-lg" @click="generate" :disabled="generating">
                 <Sparkles v-if="!generating" class="w-4 h-4" />
                 <Loader2 v-else class="w-4 h-4 animate-spin" />
@@ -490,61 +682,67 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- 右侧 · 历史报告列表 -->
-        <div class="col-span-12 lg:col-span-7 xl:col-span-8 space-y-3">
-          <div class="flex items-center gap-2.5 mb-1">
-            <h2 class="font-display text-[15px] font-semibold tracking-tight">历史报告</h2>
-            <span class="chip chip-neutral">{{ reports.length }}</span>
+      <!-- 流式生成中 -->
+      <div v-if="generating" class="card p-5 mb-4">
+        <div class="flex items-center gap-2 text-sm mb-3" style="color: hsl(27 92% 50%)">
+          <Loader2 class="w-4 h-4 animate-spin" />
+          <span class="font-semibold">正在生成 {{ typeLabels[form.type] }}…</span>
+          <span class="ml-auto chip chip-cool">实时</span>
+        </div>
+        <div class="markdown-body text-sm" v-html="marked.parse(streamingContent || '等待响应...')"></div>
+      </div>
+
+      <!-- 历史报告区 · 下方铺满 -->
+      <div>
+        <div class="flex items-center gap-2.5 mb-3">
+          <h2 class="font-display text-[15px] font-semibold tracking-tight">历史报告</h2>
+          <span class="chip chip-neutral">{{ reports.length }}</span>
+        </div>
+
+        <div v-if="loading" class="flex items-center gap-2 text-muted-foreground py-6 justify-center">
+          <Loader2 class="w-4 h-4 animate-spin" /> 加载中...
+        </div>
+
+        <div v-else-if="reports.length === 0" class="card p-12 text-center text-muted-foreground">
+          <div class="w-14 h-14 rounded-[14px] mx-auto mb-3 flex items-center justify-center"
+               style="background: linear-gradient(135deg, hsl(165 21% 92%), hsl(27 92% 95%));">
+            <FileText class="w-6 h-6 text-primary" />
           </div>
+          <div class="font-display text-[15px] font-semibold mb-1 text-foreground">还没有生成过报告</div>
+          <p class="text-xs">配置上方参数后点击"开始生成报告"</p>
+        </div>
 
-          <!-- 流式生成中 -->
-          <div v-if="generating" class="card p-5">
-            <div class="flex items-center gap-2 text-sm mb-3" style="color: hsl(27 92% 50%)">
-              <Loader2 class="w-4 h-4 animate-spin" />
-              <span class="font-semibold">正在生成 {{ typeLabels[form.type] }}…</span>
-              <span class="ml-auto chip chip-cool">实时</span>
-            </div>
-            <div class="markdown-body text-sm" v-html="marked.parse(streamingContent || '等待响应...')"></div>
-          </div>
-
-          <div v-if="loading" class="flex items-center gap-2 text-muted-foreground py-6 justify-center">
-            <Loader2 class="w-4 h-4 animate-spin" /> 加载中...
-          </div>
-
-          <div v-else-if="reports.length === 0" class="card p-12 text-center text-muted-foreground">
-            <div class="w-14 h-14 rounded-[14px] mx-auto mb-3 flex items-center justify-center"
-                 style="background: linear-gradient(135deg, hsl(165 21% 92%), hsl(27 92% 95%));">
-              <FileText class="w-6 h-6 text-primary" />
-            </div>
-            <div class="font-display text-[15px] font-semibold mb-1 text-foreground">还没有生成过报告</div>
-            <p class="text-xs">配置左侧参数后点击"开始生成报告"</p>
-          </div>
-
-          <div v-else class="space-y-2">
-            <div
-              v-for="r in reports"
-              :key="r.id"
-              class="card card-hover p-4 flex items-center gap-4 cursor-pointer"
-              @click="viewReport(r)"
-            >
-              <div class="w-11 h-11 rounded-[10px] flex items-center justify-center flex-shrink-0"
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div
+            v-for="r in reports"
+            :key="r.id"
+            class="card card-hover p-4 cursor-pointer"
+            @click="viewReport(r)"
+          >
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-[10px] flex items-center justify-center flex-shrink-0"
                    style="background: linear-gradient(135deg, hsl(27 92% 95%), hsl(165 21% 92%)); color: hsl(27 92% 50%);">
                 <FileText class="w-5 h-5" />
               </div>
               <div class="flex-1 min-w-0">
                 <div class="font-medium truncate text-foreground">{{ r.title }}</div>
-                <div class="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+                <div class="text-xs text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
                   <span class="chip chip-neutral !text-[10px] !py-0 !px-1.5">{{ typeLabels[r.type] }}</span>
-                  <span class="font-mono">{{ r.startDate }} 至 {{ r.endDate }}</span>
-                  <span>·</span>
-                  <span>{{ relativeTime(r.createdAt) }}</span>
+                  <span class="font-mono text-[10.5px]">{{ r.startDate }} ~ {{ r.endDate }}</span>
+                </div>
+                <div class="text-[11px] text-muted-foreground mt-1.5">{{ relativeTime(r.createdAt) }}</div>
+                <div class="flex items-center gap-1.5 mt-2">
+                  <span v-if="r.status === 'generating'" class="chip chip-warn !text-[10px]">生成中</span>
+                  <span v-else-if="r.status === 'failed'" class="chip !text-[10px]" style="background: hsl(16 65% 95%); color: hsl(16 65% 35%)">失败</span>
+                  <span v-else class="chip !text-[10px]" style="background: hsl(142 50% 92%); color: hsl(142 60% 30%)">已完成</span>
+                  <div class="ml-auto flex items-center gap-1">
+                    <button class="btn-ghost btn-icon btn-sm" @click.stop="exportReport(r)" title="导出"><Download class="w-3.5 h-3.5" /></button>
+                    <button class="btn-ghost btn-icon btn-sm hover:!text-destructive" @click.stop="deleteReport(r.id)" title="删除"><Trash2 class="w-3.5 h-3.5" /></button>
+                  </div>
                 </div>
               </div>
-              <span v-if="r.status === 'generating'" class="chip chip-warn">生成中</span>
-              <span v-else-if="r.status === 'failed'" class="chip" style="background: hsl(16 65% 95%); color: hsl(16 65% 35%)">失败</span>
-              <button class="btn-ghost btn-icon btn-sm" @click.stop="exportReport(r)" title="导出"><Download class="w-3.5 h-3.5" /></button>
-              <button class="btn-ghost btn-icon btn-sm hover:!text-destructive" @click.stop="deleteReport(r.id)" title="删除"><Trash2 class="w-3.5 h-3.5" /></button>
             </div>
           </div>
         </div>

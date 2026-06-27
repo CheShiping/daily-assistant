@@ -1,42 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted, defineComponent, h, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 import type { AppSettings } from '@/types'
+import { isApiReady, safeCall, FALLBACK_SETTINGS } from '@/lib/utils'
 import {
   Loader2, CheckCircle2, XCircle, Eye, EyeOff,
   Settings as SettingsIcon, Camera, Brain, Database, Sparkles,
-  Trash2, Download, Upload, ChevronDown, Wand2, Languages, Clock,
+  Trash2, Download, Upload, Wand2, Languages, Clock,
   Shield, Bell, Keyboard, FlaskConical, Copy, Check, RefreshCw, Crown, Power
 } from 'lucide-vue-next'
 
-// Switch 自定义控件
-const Switch = defineComponent({
-  name: 'Switch',
-  props: { modelValue: { type: Boolean, default: false }, disabled: { type: Boolean, default: false } },
-  emits: ['update:modelValue'],
-  setup(props, { emit }) {
-    return () => h('button', {
-      type: 'button',
-      disabled: props.disabled,
-      onClick: () => !props.disabled && emit('update:modelValue', !props.modelValue),
-      class: [
-        'relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors',
-        props.modelValue ? 'bg-primary' : 'bg-muted-foreground/30',
-        props.disabled ? 'opacity-50 cursor-not-allowed' : ''
-      ]
-    }, [
-      h('span', {
-        class: [
-          'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
-          props.modelValue ? 'translate-x-4' : 'translate-x-0.5'
-        ]
-      })
-    ])
-  }
-})
-
-const settings = ref<AppSettings | null>(null)
+const settings = ref<AppSettings>({ ...FALLBACK_SETTINGS })
 const loading = ref(true)
 const saving = ref(false)
 const showKey = ref(false)
@@ -45,12 +20,11 @@ const testResult = ref<{ ok: boolean; message: string } | null>(null)
 const excludedAppsText = ref('')
 
 const privacyLevels = [
-  { label: '宽松', value: 'loose', desc: '记录所有内容' },
-  { label: '标准', value: 'standard', desc: '跳过敏感场景' },
-  { label: '严格', value: 'strict', desc: '仅记录工作应用' }
+  { label: '宽松 · 记录所有内容', value: 'loose' },
+  { label: '标准 · 跳过敏感场景', value: 'standard' },
+  { label: '严格 · 仅记录工作应用', value: 'strict' }
 ]
 
-const intervalOpen = ref(false)
 const screenshotIntervals = [
   { label: '1 分钟', value: 60 },
   { label: '2 分钟', value: 120 },
@@ -75,30 +49,44 @@ const apiConfigCopied = ref(false)
 
 async function load() {
   loading.value = true
-  settings.value = await window.api.settings.get()
-  excludedAppsText.value = (settings.value.excludedApps ?? []).join('\n')
-  apiPortDraft.value = settings.value.localApiPort || 8088
-  loading.value = false
+  try {
+    const s = await safeCall(() => window.api.settings.get(), { ...FALLBACK_SETTINGS })
+    settings.value = { ...FALLBACK_SETTINGS, ...s }
+    excludedAppsText.value = (settings.value.excludedApps ?? []).join('\n')
+    apiPortDraft.value = settings.value.localApiPort || 8088
+  } finally {
+    loading.value = false
+  }
   refreshScreenshotStatus()
   refreshApiStatus()
 }
 
 async function save() {
-  if (!settings.value) return
+  if (!settings.value || !isApiReady()) return
   saving.value = true
-  const excludedApps = excludedAppsText.value.split('\n').map(s => s.trim()).filter(Boolean)
-  await window.api.settings.update({ ...settings.value, excludedApps })
-  saving.value = false
+  try {
+    const excludedApps = excludedAppsText.value.split('\n').map(s => s.trim()).filter(Boolean)
+    await window.api.settings.update({ ...settings.value, excludedApps })
+  } finally {
+    saving.value = false
+  }
 }
 
 async function saveField(field: keyof AppSettings, value: any) {
-  if (!settings.value) return
+  if (!settings.value || !isApiReady()) return
   ;(settings.value as any)[field] = value
-  await window.api.settings.update({ [field]: value } as any)
+  try {
+    await window.api.settings.update({ [field]: value } as any)
+  } catch (e) {
+    console.warn('saveField failed:', e)
+  }
 }
 
 async function testConnection() {
-  if (!settings.value) return
+  if (!settings.value || !isApiReady()) {
+    testResult.value = { ok: false, message: 'Electron 未启动，无法测试连接' }
+    return
+  }
   await save()
   testing.value = true
   testResult.value = null
@@ -106,13 +94,18 @@ async function testConnection() {
     testResult.value = await window.api.ai.testConnection()
   } catch (e) {
     testResult.value = { ok: false, message: (e as Error).message }
+  } finally {
+    testing.value = false
   }
-  testing.value = false
 }
 
 const capturing = ref(false)
 const captureStatus = ref('截图识别当前屏幕内容，生成一条工作记录')
 async function captureNow() {
+  if (!isApiReady()) {
+    captureStatus.value = 'Electron 未启动，无法截图'
+    return
+  }
   capturing.value = true
   captureStatus.value = '正在截图并识别...'
   try {
@@ -132,7 +125,6 @@ async function captureNow() {
 
 function setIntervalSec(val: number) {
   if (settings.value) settings.value.screenshotIntervalSec = val
-  intervalOpen.value = false
   saveField('screenshotIntervalSec', val)
 }
 
@@ -144,13 +136,14 @@ function currentIntervalLabel() {
 
 // 自动记录开关
 async function refreshScreenshotStatus() {
-  try {
-    const r = await window.api.screenshots.status()
-    screenshotRunning.value = r.running
-  } catch {}
+  screenshotRunning.value = await safeCall(
+    async () => (await window.api.screenshots.status()).running,
+    false
+  )
 }
 
 async function toggleAutoRecord(v: boolean) {
+  if (!isApiReady()) return
   try {
     if (v) await window.api.screenshots.start()
     else await window.api.screenshots.stop()
@@ -162,6 +155,10 @@ async function toggleAutoRecord(v: boolean) {
 
 // 数据清除
 async function clearData() {
+  if (!isApiReady()) {
+    alert('Electron 未启动')
+    return
+  }
   clearing.value = true
   try {
     await window.api.dataManagement.clear()
@@ -172,21 +169,29 @@ async function clearData() {
   }
 }
 
-async function exportData() { await window.api.dataManagement.export() }
+async function exportData() {
+  if (!isApiReady()) return alert('Electron 未启动')
+  await window.api.dataManagement.export()
+}
 async function importData() {
+  if (!isApiReady()) return alert('Electron 未启动')
   const r = await window.api.dataManagement.import()
   if (r.ok) alert('导入成功')
 }
 
 // 本地 API
 async function refreshApiStatus() {
-  try {
-    apiStatus.value = await window.api.localApi.getStatus()
+  apiStatus.value = await safeCall(
+    () => window.api.localApi.getStatus(),
+    { running: false, port: 8088, token: '' }
+  )
+  if (apiStatus.value) {
     apiPortDraft.value = apiStatus.value.port || settings.value?.localApiPort || 8088
-  } catch {}
+  }
 }
 
 async function toggleLocalApi(v: boolean) {
+  if (!isApiReady()) return alert('Electron 未启动')
   apiToggling.value = true
   try {
     if (v) {
@@ -203,9 +208,9 @@ async function toggleLocalApi(v: boolean) {
 }
 
 async function applyApiPort() {
+  if (!isApiReady()) return
   await window.api.settings.update({ localApiPort: apiPortDraft.value })
   if (apiStatus.value?.running) {
-    // 重启以应用新端口
     await window.api.localApi.stop()
     await window.api.localApi.start({ port: apiPortDraft.value })
     await refreshApiStatus()
@@ -213,6 +218,7 @@ async function applyApiPort() {
 }
 
 async function regenerateToken() {
+  if (!isApiReady()) return
   if (!confirm('重置 Token 后，原 Token 将立即失效，已有接入需重新配置。确认重置？')) return
   const r = await window.api.localApi.regenerateToken()
   if (r.ok) await refreshApiStatus()
@@ -260,15 +266,15 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="p-6 px-7 max-w-3xl mx-auto pb-12 w-full h-full overflow-y-auto min-h-0">
+  <div class="p-6 px-7 max-w-[1280px] mx-auto pb-12 w-full">
     <h1 class="font-display text-[26px] font-bold tracking-tight mb-1">设置</h1>
     <p class="text-xs text-muted-foreground mb-6">配置 API、隐私、截图节奏和本地接入</p>
 
-    <div v-if="loading" class="flex items-center gap-2 text-muted-foreground">
+    <div v-if="loading" class="flex items-center gap-2 text-muted-foreground py-8">
       <Loader2 class="w-4 h-4 animate-spin" /> 加载中...
     </div>
 
-    <div v-else-if="settings" class="space-y-4">
+    <div v-else class="space-y-4">
 
       <!-- 卡片 1：通用 -->
       <section class="card overflow-hidden">
@@ -289,7 +295,7 @@ onMounted(load)
             <div class="text-sm font-medium">自动记录工作</div>
             <div class="text-xs text-muted-foreground mt-0.5">开启后定时截图并识别当前工作状态</div>
           </div>
-          <Switch :model-value="screenshotRunning" @update:model-value="toggleAutoRecord" />
+          <q-toggle :model-value="screenshotRunning" color="primary" keep-color @update:model-value="toggleAutoRecord" />
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
@@ -298,13 +304,7 @@ onMounted(load)
           </div>
           <div class="flex items-center gap-2">
             <Keyboard class="w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              v-model="settings.globalShortcut"
-              class="input w-32 text-center"
-              placeholder="Ctrl+Shift+J"
-              @blur="save"
-            />
+            <q-input v-model="settings.globalShortcut" dense outlined class="w-32" placeholder="Ctrl+Shift+J" @blur="save" />
           </div>
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
@@ -312,7 +312,7 @@ onMounted(load)
             <div class="text-sm font-medium">系统通知</div>
             <div class="text-xs text-muted-foreground mt-0.5">记录成功或跳过时显示通知</div>
           </div>
-          <Switch v-model="settings.showNotifications" @update:model-value="save" />
+          <q-toggle v-model="settings.showNotifications" color="primary" keep-color @update:model-value="save" />
         </div>
       </section>
 
@@ -329,60 +329,64 @@ onMounted(load)
             <div class="text-sm font-medium">截图间隔</div>
             <div class="text-xs text-muted-foreground mt-0.5">每多久抓取一次屏幕</div>
           </div>
-          <div class="relative">
-            <button class="btn-outline btn-sm flex items-center gap-1" @click="intervalOpen = !intervalOpen">
-              <Clock class="w-3 h-3" /> {{ currentIntervalLabel() }} <ChevronDown class="w-3 h-3" />
-            </button>
-            <div v-if="intervalOpen" class="absolute right-0 top-9 z-10 card py-1 w-28">
-              <button v-for="i in screenshotIntervals" :key="i.value"
-                class="w-full px-3 py-1.5 text-left text-sm hover:bg-accent"
-                @click="setIntervalSec(i.value)">{{ i.label }}</button>
-            </div>
-          </div>
+          <q-select
+            v-model="settings.screenshotIntervalSec"
+            :options="screenshotIntervals"
+            option-value="value"
+            option-label="label"
+            emit-value
+            map-options
+            dense
+            outlined
+            class="w-36 interval-select"
+            @update:model-value="(v) => saveField('screenshotIntervalSec', v)"
+          >
+            <template v-slot:prepend>
+              <Clock class="w-3.5 h-3.5 text-muted-foreground" />
+            </template>
+          </q-select>
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
             <div class="text-sm font-medium">视觉识别</div>
             <div class="text-xs text-muted-foreground mt-0.5">使用 AI 视觉模型分析截图内容</div>
           </div>
-          <Switch v-model="settings.visionEnabled" @update:model-value="save" />
+          <q-toggle v-model="settings.visionEnabled" color="primary" keep-color @update:model-value="save" />
         </div>
         <div class="px-5 py-3 border-t">
           <div class="text-sm font-medium mb-1">隐私级别</div>
           <div class="text-xs text-muted-foreground mb-3">控制截图记录的隐私策略</div>
-          <div class="grid grid-cols-3 gap-3">
-            <button
-              v-for="level in privacyLevels"
-              :key="level.value"
-              class="flex flex-col items-center p-3 rounded-lg border transition-colors"
-              :class="settings.privacyLevel === level.value
-                ? 'border-primary bg-primary/5 text-primary'
-                : 'border-border hover:border-primary/50'"
-              @click="settings.privacyLevel = level.value as any; save()"
-            >
-              <span class="text-sm font-medium">{{ level.label }}</span>
-              <span class="text-xs mt-1 opacity-80">{{ level.desc }}</span>
-            </button>
-          </div>
+          <q-select
+            v-model="settings.privacyLevel"
+            :options="privacyLevels"
+            option-value="value"
+            option-label="label"
+            emit-value
+            map-options
+            outlined
+            dense
+            class="full-width privacy-select"
+            @update:model-value="(v) => saveField('privacyLevel', v)"
+          />
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
             <div class="text-sm font-medium">截图分析后自动删除</div>
             <div class="text-xs text-muted-foreground mt-0.5">AI 分析完成后立即删除本地截图文件</div>
           </div>
-          <Switch v-model="settings.autoDeleteScreenshots" @update:model-value="save" />
+          <q-toggle v-model="settings.autoDeleteScreenshots" color="primary" keep-color @update:model-value="save" />
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
             <div class="text-sm font-medium">敏感场景自动跳过</div>
             <div class="text-xs text-muted-foreground mt-0.5">自动识别并跳过私人沟通、社交媒体等场景</div>
           </div>
-          <Switch v-model="settings.sensitiveSceneSkip" @update:model-value="save" />
+          <q-toggle v-model="settings.sensitiveSceneSkip" color="primary" keep-color @update:model-value="save" />
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
             <div class="text-sm font-medium">识别当前屏幕</div>
-            <div class="text-xs text-muted-foreground mt-0.5">{{ captureStatus }}</div>
+            <div class="text-xs text-muted-foreground">{{ captureStatus }}</div>
           </div>
           <button class="btn-primary btn-sm flex items-center gap-1" @click="captureNow" :disabled="capturing">
             <Camera class="w-3 h-3" /> {{ capturing ? '识别中...' : '识别' }}
@@ -403,7 +407,7 @@ onMounted(load)
             <div class="text-sm font-medium">完成通知</div>
             <div class="text-xs text-muted-foreground mt-0.5">报告生成、识别完成时弹出系统通知</div>
           </div>
-          <Switch v-model="settings.showNotifications" @update:model-value="save" />
+          <q-toggle v-model="settings.showNotifications" color="primary" keep-color @update:model-value="save" />
         </div>
       </section>
 
@@ -436,34 +440,34 @@ onMounted(load)
         </div>
 
         <div class="px-5 py-3 border-t">
-          <div class="flex items-center justify-between mb-2">
-            <div class="text-sm font-medium">API Base URL</div>
-          </div>
-          <input v-model="settings.baseUrl" class="input w-full h-8 font-mono text-xs" @change="save" placeholder="https://api.openai.com/v1" />
+          <div class="text-sm font-medium mb-2">API Base URL</div>
+          <q-input v-model="settings.baseUrl" outlined dense class="full-width api-input" @blur="save" placeholder="https://api.openai.com/v1" />
         </div>
         <div class="px-5 py-3 border-t">
           <div class="flex items-center justify-between mb-2">
             <div class="text-sm font-medium">API Key</div>
-            <button class="btn-ghost btn-icon btn-sm" @click="showKey = !showKey">
+            <button class="btn-ghost btn-icon btn-sm" @click="showKey = !showKey" :title="showKey ? '隐藏' : '显示'">
               <Eye v-if="!showKey" class="w-3.5 h-3.5" />
               <EyeOff v-else class="w-3.5 h-3.5" />
             </button>
           </div>
-          <input
-            :type="showKey ? 'text' : 'password'"
+          <q-input
             v-model="settings.apiKey"
-            class="input w-full h-8 font-mono text-xs"
-            @change="save"
+            :type="showKey ? 'text' : 'password'"
+            outlined
+            dense
+            class="full-width api-input"
+            @blur="save"
             placeholder="sk-..."
           />
         </div>
         <div class="px-5 py-3 border-t">
           <div class="text-sm font-medium mb-2">报告生成模型</div>
-          <input v-model="settings.model" class="input w-full h-8 font-mono text-xs" @change="save" placeholder="如 gpt-4o、doubao-pro-32k" />
+          <q-input v-model="settings.model" outlined dense class="full-width api-input" @blur="save" placeholder="如 gpt-4o、doubao-pro-32k" />
         </div>
         <div class="px-5 py-3 border-t">
           <div class="text-sm font-medium mb-2">截图分析模型</div>
-          <input v-model="settings.visionModel" class="input w-full h-8 font-mono text-xs" @change="save" placeholder="如 gpt-4o、doubao-vision-pro" />
+          <q-input v-model="settings.visionModel" outlined dense class="full-width api-input" @blur="save" placeholder="如 gpt-4o、doubao-vision-pro" />
         </div>
         <div class="px-5 py-3 border-t">
           <div class="text-sm font-medium mb-2">自定义指令</div>
@@ -543,7 +547,7 @@ onMounted(load)
             <div class="text-sm font-medium">开机自启动</div>
             <div class="text-xs text-muted-foreground mt-0.5">登录系统后自动运行（仅 Windows）</div>
           </div>
-          <Switch :model-value="false" disabled />
+          <q-toggle :model-value="false" color="primary" keep-color disable />
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
@@ -551,15 +555,19 @@ onMounted(load)
             <div class="text-xs text-muted-foreground mt-0.5">指定时间自动基于当日工作记录生成日报</div>
           </div>
           <div class="flex items-center gap-2">
-            <input
+            <q-input
               type="time"
               v-model="settings.scheduledReportTime"
-              class="input h-8 text-sm w-24"
-              :disabled="!settings.scheduledReportEnabled"
-              @change="saveField('scheduledReportTime', settings.scheduledReportTime)"
+              dense
+              outlined
+              class="w-28 time-input"
+              :disable="!settings.scheduledReportEnabled"
+              @blur="saveField('scheduledReportTime', settings.scheduledReportTime)"
             />
-            <Switch
+            <q-toggle
               :model-value="settings.scheduledReportEnabled"
+              color="primary"
+              keep-color
               @update:model-value="(v) => saveField('scheduledReportEnabled', v)"
             />
           </div>
@@ -569,11 +577,13 @@ onMounted(load)
             <div class="text-sm font-medium">截图保留路径</div>
             <div class="text-xs text-muted-foreground mt-0.5">未开启"截图即销毁"时，截图保存到此目录（留空使用默认）</div>
           </div>
-          <input
+          <q-input
             v-model="settings.preservePath"
-            class="input h-8 text-xs w-48 font-mono"
+            dense
+            outlined
+            class="w-48 api-input"
             placeholder="默认路径"
-            @change="saveField('preservePath', settings.preservePath)"
+            @blur="saveField('preservePath', settings.preservePath)"
           />
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
@@ -601,20 +611,28 @@ onMounted(load)
                 <span v-else class="text-muted-foreground ml-1">· 已停止</span>
               </div>
             </div>
-            <Switch :model-value="apiStatus?.running ?? false" :disabled="apiToggling" @update:model-value="toggleLocalApi" />
+            <q-toggle
+              :model-value="apiStatus?.running ?? false"
+              :disable="apiToggling"
+              color="primary"
+              keep-color
+              @update:model-value="toggleLocalApi"
+            />
           </div>
 
           <div class="mt-3 grid grid-cols-2 gap-3">
             <div>
               <label class="text-xs text-muted-foreground mb-1 block">端口</label>
               <div class="flex items-center gap-1">
-                <input
+                <q-input
                   type="number"
                   v-model="apiPortDraft"
-                  class="input h-8 text-xs w-24 font-mono"
+                  dense
+                  outlined
+                  class="w-24 api-input"
                   min="1024"
                   max="65535"
-                  @change="applyApiPort"
+                  @blur="applyApiPort"
                 />
                 <button class="btn-ghost btn-sm" @click="applyApiPort">应用</button>
               </div>
@@ -622,11 +640,12 @@ onMounted(load)
             <div>
               <label class="text-xs text-muted-foreground mb-1 block">Token</label>
               <div class="flex items-center gap-1">
-                <input
-                  type="text"
+                <q-input
+                  :model-value="apiStatus?.token || ''"
                   readonly
-                  :value="apiStatus?.token || ''"
-                  class="input h-8 text-xs w-32 font-mono"
+                  dense
+                  outlined
+                  class="w-32 api-input"
                   placeholder="未生成"
                 />
                 <button class="btn-ghost btn-icon btn-sm" @click="copyText(apiStatus?.token || '', 'token')" title="复制 Token">
@@ -657,3 +676,69 @@ onMounted(load)
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Quasar 控件皮肤统一到 design token */
+:deep(.q-field--outlined .q-field__control) {
+  border-radius: 10px !important;
+  background: hsl(var(--background));
+  min-height: 36px;
+  padding: 0 10px;
+}
+:deep(.q-field--outlined .q-field__control):hover {
+  border-color: hsl(var(--muted-foreground) / 0.3);
+}
+:deep(.q-field--outlined.q-field--focused .q-field__control) {
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.14);
+  border-color: hsl(var(--primary));
+}
+:deep(.q-field__native),
+:deep(.q-field__input) {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+  color: hsl(var(--foreground));
+  min-height: 36px;
+  padding: 0;
+}
+:deep(.api-input .q-field__native),
+:deep(.api-input .q-field__input) {
+  font-size: 12px;
+}
+:deep(.interval-select .q-field__native),
+:deep(.privacy-select .q-field__native),
+:deep(.interval-select .q-field__input),
+:deep(.privacy-select .q-field__input) {
+  font-family: inherit;
+  font-size: 13px;
+}
+:deep(.time-input input) {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+}
+
+/* Quasar 列表 / 选项弹窗 */
+:deep(.q-menu) {
+  border-radius: 10px;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 12px 28px hsl(27 30% 20% / 0.10);
+}
+:deep(.q-item) {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: hsl(var(--foreground));
+}
+:deep(.q-item:hover) {
+  background: hsl(var(--accent));
+}
+:deep(.q-item--active) {
+  color: hsl(27 92% 50%);
+  background: hsl(27 92% 63% / 0.10);
+}
+
+/* Quasar toggle 圆角 */
+:deep(.q-toggle__inner) {
+  color: hsl(var(--primary));
+}
+</style>

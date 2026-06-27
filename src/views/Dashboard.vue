@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { today, formatDate, relativeTime } from '@/lib/utils'
+import { today, formatDate, relativeTime, safeCall } from '@/lib/utils'
 import type { Report, WorkRecord } from '@/types'
 import { FileText, ListChecks, Sparkles, Play, Square, Settings, Clock, Activity, BarChart3, ArrowRight } from 'lucide-vue-next'
 
@@ -66,12 +66,12 @@ async function load() {
   end.setHours(23, 59, 59, 999)
 
   const [records, reports, status, settings, heat, usage] = await Promise.all([
-    window.api.workRecords.list({ date: today(), limit: 500 }),
-    window.api.reports.list({ limit: 5 }),
-    window.api.screenshots.status(),
-    window.api.settings.get(),
-    window.api.heatmap.list({ startDate: start.toISOString(), endDate: end.toISOString() }),
-    window.api.appUsage.list({ startDate: start.toISOString(), endDate: end.toISOString() })
+    safeCall(() => window.api.workRecords.list({ date: today(), limit: 500 }), [] as WorkRecord[]),
+    safeCall(() => window.api.reports.list({ limit: 5 }), [] as Report[]),
+    safeCall(() => window.api.screenshots.status(), { running: false }),
+    safeCall(() => window.api.settings.get(), { apiKey: '' } as any),
+    safeCall(() => window.api.heatmap.list({ startDate: start.toISOString(), endDate: end.toISOString() }), [] as any[]),
+    safeCall(() => window.api.appUsage.list({ startDate: start.toISOString(), endDate: end.toISOString() }), [] as any[])
   ])
   todayRecords.value = records
   recentReports.value = reports
@@ -82,17 +82,21 @@ async function load() {
 }
 
 async function toggleScreenshot() {
-  if (screenshotRunning.value) await window.api.screenshots.stop()
-  else await window.api.screenshots.start()
-  const s = await window.api.screenshots.status()
-  screenshotRunning.value = s.running
+  try {
+    if (screenshotRunning.value) await window.api.screenshots.stop()
+    else await window.api.screenshots.start()
+    const s = await window.api.screenshots.status()
+    screenshotRunning.value = s.running
+  } catch (e) {
+    console.warn('toggleScreenshot failed:', e)
+  }
 }
 
 onMounted(load)
 </script>
 
 <template>
-  <div class="p-6 px-7 max-w-5xl mx-auto w-full h-full overflow-y-auto min-h-0">
+  <div class="p-6 px-7 max-w-[1280px] mx-auto w-full h-full overflow-y-auto min-h-0">
     <h1 class="text-2xl font-bold mb-1">概览</h1>
     <p class="text-sm text-muted-foreground mb-6">{{ formatDate(new Date()) }} · 牙牙乐日报助手</p>
 

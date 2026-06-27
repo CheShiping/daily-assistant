@@ -76,14 +76,14 @@ onUnmounted(() => {
 
 function toggleCollapse() { collapsed.value = !collapsed.value }
 
-const version = ref('2.0.0')
+const version = ref('2.1.1')
 onMounted(async () => {
   try { version.value = await window.api.getVersion() } catch {}
 })
 </script>
 
 <template>
-  <div class="flex h-screen w-screen overflow-hidden bg-background">
+  <div class="flex h-screen w-screen bg-background">
     <!-- 侧边栏 · 暖白 + 柑橘亮 active -->
     <aside
       class="relative flex-shrink-0 border-r bg-sidebar text-sidebar-foreground flex flex-col overflow-hidden"
@@ -216,8 +216,8 @@ onMounted(async () => {
       </button>
     </aside>
 
-    <!-- 主区域 · min-h-0 让子 view 的 h-full 生效 · router-view fade transition -->
-    <main class="flex-1 flex flex-col min-h-0 overflow-hidden bg-background">
+    <!-- 主区域 · h-full + min-h-0 让子 view 的 h-full 生效 · router-view fade transition -->
+    <main class="flex-1 h-full flex flex-col min-h-0 overflow-y-auto bg-background">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />

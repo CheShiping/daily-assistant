@@ -5,7 +5,8 @@ import {
   Check, BarChart3, Clock, Monitor, Play, Square,
   Plus, Trash2, GripVertical, Loader2, Sparkles, Shield
 } from 'lucide-vue-next'
-import { today, formatDate } from '@/lib/utils'
+import { today, formatDate, isApiReady, safeCall } from '@/lib/utils'
+import { toast } from '@/lib/toast'
 import type { WorkRecord, PlanItem, AppSettings } from '@/types'
 
 const router = useRouter()
@@ -154,15 +155,18 @@ async function load() {
     const end = new Date()
     end.setHours(23, 59, 59, 999)
     const [all, dps, status, s, pl] = await Promise.all([
-      window.api.workRecords.list({ startDate: start.toISOString(), endDate: end.toISOString() }),
-      window.api.system.displays(),
-      window.api.screenshots.status(),
-      window.api.settings.get(),
-      window.api.plans.list({ date: todayStr })
+      safeCall(
+        () => window.api.workRecords.list({ startDate: start.toISOString(), endDate: end.toISOString() }),
+        [] as WorkRecord[]
+      ),
+      safeCall(() => window.api.system.displays(), [] as any[]),
+      safeCall(() => window.api.screenshots.status(), { running: false }),
+      safeCall(() => window.api.settings.get(), null as any),
+      safeCall(() => window.api.plans.list({ date: todayStr }), [] as PlanItem[])
     ])
-    records.value = all.filter(r => formatDate(r.startedAt) === todayStr)
-    yesterdayRecords.value = all.filter(r => formatDate(r.startedAt) === yesterdayStr)
-    dayBeforeRecords.value = all.filter(r => formatDate(r.startedAt) === dayBeforeStr)
+    records.value = (all as WorkRecord[]).filter(r => formatDate(r.startedAt) === todayStr)
+    yesterdayRecords.value = (all as WorkRecord[]).filter(r => formatDate(r.startedAt) === yesterdayStr)
+    dayBeforeRecords.value = (all as WorkRecord[]).filter(r => formatDate(r.startedAt) === dayBeforeStr)
     displays.value = dps
     screenshotRunning.value = status.running
     settings.value = s
@@ -173,33 +177,93 @@ async function load() {
 }
 
 async function reloadPlans() {
-  plans.value = await window.api.plans.list({ date: todayStr })
+  if (!isApiReady()) return
+  try {
+    plans.value = await window.api.plans.list({ date: todayStr })
+  } catch (e) {
+    console.warn('reloadPlans failed:', e)
+  }
 }
 
 async function toggleScreenshot() {
-  if (screenshotRunning.value) await window.api.screenshots.stop()
-  else await window.api.screenshots.start()
-  const s = await window.api.screenshots.status()
-  screenshotRunning.value = s.running
+  if (!isApiReady()) {
+    toast.warning('Electron 未启动')
+    return
+  }
+  try {
+    if (screenshotRunning.value) {
+      await window.api.screenshots.stop()
+      toast.info('已暂停自动记录')
+    } else {
+      await window.api.screenshots.start()
+      toast.success('已开启自动记录')
+    }
+    const s = await window.api.screenshots.status()
+    screenshotRunning.value = s.running
+  } catch (e) {
+    console.warn('toggleScreenshot failed:', e)
+    toast.error('切换失败：' + (e as Error).message)
+  }
 }
 
 // ============ 计划操作 ============
 async function addPlan() {
-  if (!newPlanText.value.trim()) return
-  await window.api.plans.create({ date: todayStr, text: newPlanText.value.trim() })
-  newPlanText.value = ''
-  await reloadPlans()
+  const text = newPlanText.value.trim()
+  if (!text) return
+  if (!isApiReady()) {
+    // dev 模式：本地态也加，方便查看
+    plans.value = [
+      ...plans.value,
+      {
+        id: 'local-' + Date.now(),
+        text,
+        date: todayStr,
+        completed: false,
+        order: plans.value.length
+      } as any as PlanItem
+    ]
+    newPlanText.value = ''
+    toast.info('已本地添加（dev 模式）')
+    return
+  }
+  try {
+    await window.api.plans.create({ date: todayStr, text })
+    newPlanText.value = ''
+    await reloadPlans()
+    toast.success('计划已添加')
+  } catch (e) {
+    console.warn('addPlan failed:', e)
+    toast.error('添加失败：' + (e as Error).message)
+  }
 }
 
 async function togglePlan(plan: PlanItem) {
-  await window.api.plans.update({ id: plan.id, completed: !plan.completed })
-  await reloadPlans()
+  if (!isApiReady()) {
+    // 本地态翻转
+    plan.completed = !plan.completed
+    return
+  }
+  try {
+    await window.api.plans.update({ id: plan.id, completed: !plan.completed })
+    await reloadPlans()
+  } catch (e) {
+    console.warn('togglePlan failed:', e)
+  }
 }
 
 async function confirmDeletePlan(id: string) {
-  await window.api.plans.delete(id)
-  deletingPlanId.value = null
-  await reloadPlans()
+  if (!isApiReady()) {
+    plans.value = plans.value.filter(p => p.id !== id)
+    deletingPlanId.value = null
+    return
+  }
+  try {
+    await window.api.plans.delete(id)
+    deletingPlanId.value = null
+    await reloadPlans()
+  } catch (e) {
+    console.warn('confirmDeletePlan failed:', e)
+  }
 }
 
 function startEditPlan(plan: PlanItem) {
@@ -212,10 +276,24 @@ async function saveEditPlan() {
     editingPlanId.value = null
     return
   }
-  await window.api.plans.update({ id: editingPlanId.value, text: editingPlanText.value.trim() })
-  editingPlanId.value = null
-  editingPlanText.value = ''
-  await reloadPlans()
+  if (!isApiReady()) {
+    const p = plans.value.find(x => x.id === editingPlanId.value)
+    if (p) p.text = editingPlanText.value.trim()
+    editingPlanId.value = null
+    editingPlanText.value = ''
+    toast.info('已本地更新（dev 模式）')
+    return
+  }
+  try {
+    await window.api.plans.update({ id: editingPlanId.value, text: editingPlanText.value.trim() })
+    editingPlanId.value = null
+    editingPlanText.value = ''
+    await reloadPlans()
+    toast.success('计划已更新')
+  } catch (e) {
+    console.warn('saveEditPlan failed:', e)
+    toast.error('更新失败：' + (e as Error).message)
+  }
 }
 
 // ============ 拖拽排序 ============
@@ -233,11 +311,25 @@ async function onDrop(e: DragEvent, target: PlanItem) {
   const sourceIdx = plans.value.findIndex(p => p.id === sourceId)
   const targetIdx = plans.value.findIndex(p => p.id === target.id)
   if (sourceIdx < 0 || targetIdx < 0) return
+  if (!isApiReady()) {
+    const sp = plans.value[sourceIdx]
+    const tp = plans.value[targetIdx]
+    if (sp && tp) {
+      const tmp = sp.order
+      sp.order = tp.order
+      tp.order = tmp
+    }
+    return
+  }
   const sourceOrder = plans.value[sourceIdx].order
   const targetOrder = plans.value[targetIdx].order
-  await window.api.plans.update({ id: sourceId, order: targetOrder })
-  await window.api.plans.update({ id: target.id, order: sourceOrder })
-  await reloadPlans()
+  try {
+    await window.api.plans.update({ id: sourceId, order: targetOrder })
+    await window.api.plans.update({ id: target.id, order: sourceOrder })
+    await reloadPlans()
+  } catch (e) {
+    console.warn('onDrop failed:', e)
+  }
 }
 
 const planProgress = computed(() => {
@@ -250,7 +342,7 @@ onUnmounted(() => {})
 </script>
 
 <template>
-  <div class="flex flex-col gap-5 p-6 px-7 max-w-[1280px] mx-auto w-full h-full overflow-y-auto min-h-0">
+  <div class="flex flex-col gap-5 p-6 px-7 max-w-[1280px] mx-auto w-full">
 
     <!-- 0. API Key 提示 -->
     <div v-if="settings && !settings.apiKey"
@@ -264,16 +356,18 @@ onUnmounted(() => {})
       </div>
     </div>
 
-    <!-- 1. Hero · 暖渐变 + 大字 + 隐私 chip + REC 状态 -->
-    <div class="relative rounded-[18px] overflow-hidden reveal"
-         style="background: linear-gradient(135deg, hsl(27 92% 95%) 0%, hsl(36 38% 96%) 45%, hsl(165 21% 92%) 100%);">
+    <!-- 1. Hero · 暖渐变 + 大字 + 隐私 chip + REC 状态（无 reveal 动画确保稳定显示） -->
+    <div
+      class="relative rounded-[18px] overflow-hidden flex-shrink-0"
+      style="background: linear-gradient(135deg, hsl(27 92% 95%) 0%, hsl(36 38% 96%) 45%, hsl(165 21% 92%) 100%); padding: 24px 28px;"
+    >
       <!-- 装饰光斑 -->
       <div class="absolute -top-12 -right-12 w-64 h-64 rounded-full pointer-events-none"
            style="background: radial-gradient(circle, hsl(27 92% 63% / 0.18), transparent 60%);"></div>
       <div class="absolute -bottom-16 left-1/3 w-56 h-56 rounded-full pointer-events-none"
            style="background: radial-gradient(circle, hsl(165 21% 57% / 0.15), transparent 60%);"></div>
 
-      <div class="relative p-6 px-7 flex items-center gap-5">
+      <div class="relative flex items-center gap-5">
         <!-- 品牌 mark -->
         <div class="w-14 h-14 rounded-[14px] flex items-center justify-center flex-shrink-0"
              style="background: linear-gradient(135deg, hsl(27 92% 65%), hsl(27 92% 55%)); box-shadow: 0 8px 22px hsl(27 92% 63% / 0.32), inset 0 1px 0 rgba(255,255,255,0.4);">
@@ -406,11 +500,12 @@ onUnmounted(() => {})
       </div>
 
       <!-- 添加计划 -->
-      <div class="flex items-center gap-2 mt-3 pt-3 border-t border-border">
-        <Plus class="w-3.5 h-3.5 text-muted-foreground" />
+      <div class="flex items-center gap-2 mt-3 pt-3 border-t border-border cursor-text">
+        <Plus class="w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
         <input
           v-model="newPlanText"
-          class="flex-1 bg-transparent border-0 outline-none text-[13.5px] placeholder:text-muted-foreground/60 focus:bg-muted/40 rounded-md px-2 py-1.5 transition-colors"
+          class="flex-1 bg-transparent border-0 outline-none text-[13.5px] placeholder:text-muted-foreground/60 focus:bg-muted/40 rounded-md px-2 py-1.5 transition-colors cursor-text"
+          style="caret-color: hsl(27 92% 50%);"
           placeholder="添加计划…（Enter 提交）"
           @keyup.enter="addPlan"
         />
@@ -419,7 +514,7 @@ onUnmounted(() => {})
 
     <!-- 3. 工作概览 · Bento 3 卡 + count-up -->
     <section class="reveal reveal-2">
-      <div class="flex items-center gap-2.5 mb-3.5">
+      <div class="flex items-center gap-2.5 mb-1">
         <div class="w-7 h-7 rounded-lg flex items-center justify-center"
              style="background: hsl(27 92% 63% / 0.12); color: hsl(27 92% 50%);">
           <BarChart3 :size="14" :stroke-width="2.5" />
@@ -431,6 +526,7 @@ onUnmounted(() => {})
           @click="router.push('/timeline')"
         >查看全部 →</button>
       </div>
+      <p class="text-xs text-muted-foreground mb-3.5 ml-9">今日工作活动的核心指标概览，包括记录条数、专注时长与主要工作分类</p>
 
       <div v-if="loading" class="grid grid-cols-3 gap-3">
         <div v-for="i in 3" :key="i" class="card p-4">
