@@ -13,7 +13,6 @@ import {
   PanelLeftClose,
   PanelLeft,
   HelpCircle,
-<<<<<<< HEAD
   Crown,
   Shield,
   Gift
@@ -39,11 +38,6 @@ function handleKeydown(e: KeyboardEvent) {
   window.api.screenshots.captureNow()
 }
 
-=======
-  Shield
-} from 'lucide-vue-next'
-
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 const route = useRoute()
 const screenshotRunning = ref(false)
 const collapsed = ref(false)
@@ -61,17 +55,11 @@ const mainNav = [
 
 // 更多分组
 const moreNav = [
-<<<<<<< HEAD
   { name: 'subscription', label: '订阅', icon: Crown, path: '/subscription' },
   { name: 'invite', label: '邀请有礼', icon: Gift, path: '/invite' },
   { name: 'privacy', label: '隐私保护', icon: Shield, path: '/privacy' },
   { name: 'settings', label: '设置', icon: SettingsIcon, path: '/settings' },
   { name: 'help', label: '帮助', icon: HelpCircle, path: '/help' }
-=======
-  { name: 'privacy', label: '隐私保护', icon: Shield, path: '#' },
-  { name: 'settings', label: '设置', icon: SettingsIcon, path: '/settings' },
-  { name: 'help', label: '帮助', icon: HelpCircle, path: '#' }
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 ]
 
 async function checkScreenshotStatus() {
@@ -85,26 +73,16 @@ let statusTimer: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
   checkScreenshotStatus()
   statusTimer = setInterval(checkScreenshotStatus, 3000)
-<<<<<<< HEAD
   document.addEventListener('keydown', handleKeydown)
 })
 onUnmounted(() => {
   if (statusTimer) clearInterval(statusTimer)
   document.removeEventListener('keydown', handleKeydown)
-=======
-})
-onUnmounted(() => {
-  if (statusTimer) clearInterval(statusTimer)
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 })
 
 function toggleCollapse() { collapsed.value = !collapsed.value }
 
-<<<<<<< HEAD
 const version = ref('2.0.0')
-=======
-const version = ref('0.1.0')
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 onMounted(async () => {
   try { version.value = await window.api.getVersion() } catch {}
 })

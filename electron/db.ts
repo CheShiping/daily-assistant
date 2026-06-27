@@ -35,10 +35,7 @@ export interface ReportTemplate {
   type: 'daily' | 'weekly' | 'monthly'
   content: string
   isBuiltin: boolean
-<<<<<<< HEAD
   clustering: 'timeline' | 'category' | 'project'
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   createdAt: string
   updatedAt: string
 }
@@ -62,7 +59,6 @@ export interface AppUsageRecord {
   createdAt: string
 }
 
-<<<<<<< HEAD
 export interface PlanItem {
   id: string
   date: string
@@ -73,8 +69,6 @@ export interface PlanItem {
   updatedAt: string
 }
 
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 export interface DBSchema {
   version: number
   workRecords: WorkRecord[]
@@ -82,10 +76,7 @@ export interface DBSchema {
   templates: ReportTemplate[]
   screenshots: Screenshot[]
   appUsageRecords: AppUsageRecord[]
-<<<<<<< HEAD
   planItems: PlanItem[]
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   settings: Record<string, string>
 }
 
@@ -96,10 +87,7 @@ const DEFAULTS: DBSchema = {
   templates: [],
   screenshots: [],
   appUsageRecords: [],
-<<<<<<< HEAD
   planItems: [],
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   settings: {}
 }
 
@@ -107,13 +95,10 @@ let dbPath = ''
 let data: DBSchema | null = null
 let saveTimer: NodeJS.Timeout | null = null
 
-<<<<<<< HEAD
 function localDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 export function getDb(): DBSchema {
   if (data) return data
   const userData = app.getPath('userData')
@@ -129,7 +114,6 @@ export function getDb(): DBSchema {
   } else {
     d = { ...DEFAULTS }
   }
-<<<<<<< HEAD
 
   // v1→v2 迁移
   if (d.version < 2) {
@@ -159,19 +143,12 @@ export function getDb(): DBSchema {
   if (d.templates.filter(t => t.isBuiltin).length === 0) {
     const now = new Date().toISOString()
     const builtinTemplates: ReportTemplate[] = [
-=======
-  // 初始化内置模板
-  if (d.templates.filter(t => t.isBuiltin).length === 0) {
-    const now = new Date().toISOString()
-    d.templates.push(
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
       {
         id: 'tpl-daily-default',
         name: '标准日报模板',
         type: 'daily',
         content: '# {{日期}} 工作日报\n\n## 今日完成\n{{今日完成}}\n\n## 关键数据\n{{关键数据}}\n\n## 遇到的问题\n{{遇到的问题}}\n\n## 明日计划\n{{明日计划}}',
         isBuiltin: true,
-<<<<<<< HEAD
         clustering: 'timeline',
         createdAt: now,
         updatedAt: now
@@ -213,8 +190,6 @@ export function getDb(): DBSchema {
         content: '# {{日期}} 工作日报\n\n## 工作时间块\n{{今日完成}}\n\n## 效率分析\n{{关键数据}}\n\n## 明日计划\n{{明日计划}}',
         isBuiltin: true,
         clustering: 'timeline',
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
         createdAt: now,
         updatedAt: now
       },
@@ -224,10 +199,7 @@ export function getDb(): DBSchema {
         type: 'weekly',
         content: '# {{起始}} - {{结束}} 工作周报\n\n## 本周完成\n{{本周完成}}\n\n## 关键成果\n{{关键成果}}\n\n## 问题与风险\n{{问题与风险}}\n\n## 下周计划\n{{下周计划}}',
         isBuiltin: true,
-<<<<<<< HEAD
         clustering: 'timeline',
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
         createdAt: now,
         updatedAt: now
       },
@@ -237,7 +209,6 @@ export function getDb(): DBSchema {
         type: 'monthly',
         content: '# {{月份}} 工作月报\n\n## 本月完成\n{{本月完成}}\n\n## 关键数据\n{{关键数据}}\n\n## 复盘与改进\n{{复盘与改进}}\n\n## 下月计划\n{{下月计划}}',
         isBuiltin: true,
-<<<<<<< HEAD
         clustering: 'timeline',
         createdAt: now,
         updatedAt: now
@@ -301,13 +272,6 @@ export function getDb(): DBSchema {
       }
     }
     if (added) save()
-=======
-        createdAt: now,
-        updatedAt: now
-      }
-    )
-    save()
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   }
   data = d
   return d
@@ -457,11 +421,7 @@ export function listTemplates(type?: string): ReportTemplate[] {
   return rows
 }
 
-<<<<<<< HEAD
 export function createTemplate(input: { name: string; type: string; content: string; clustering?: 'timeline' | 'category' | 'project' }): ReportTemplate {
-=======
-export function createTemplate(input: { name: string; type: string; content: string }): ReportTemplate {
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   const db = getDb()
   const now = new Date().toISOString()
   const t: ReportTemplate = {
@@ -470,10 +430,7 @@ export function createTemplate(input: { name: string; type: string; content: str
     type: input.type as ReportTemplate['type'],
     content: input.content,
     isBuiltin: false,
-<<<<<<< HEAD
     clustering: input.clustering || 'timeline',
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
     createdAt: now,
     updatedAt: now
   }
@@ -558,11 +515,7 @@ export function timeline(opts: { startDate?: string; endDate?: string } = {}): W
     rows = rows.filter(r => r.startedAt >= opts.startDate! && r.startedAt <= opts.endDate!)
   } else {
     // 默认今天
-<<<<<<< HEAD
     const todayStr = localDate(new Date())
-=======
-    const todayStr = new Date().toISOString().slice(0, 10)
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
     rows = rows.filter(r => r.startedAt.slice(0, 10) === todayStr)
   }
   rows.sort((a, b) => a.startedAt.localeCompare(b.startedAt))
@@ -584,11 +537,7 @@ export function heatmap(opts: { startDate?: string; endDate?: string } = {}): Ar
   const map = new Map<string, number>()
   for (const r of rows) {
     const d = new Date(r.startedAt)
-<<<<<<< HEAD
     const dateStr = localDate(d)
-=======
-    const dateStr = d.toISOString().slice(0, 10)
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
     const hour = d.getHours()
     const key = `${dateStr}_${hour}`
     map.set(key, (map.get(key) ?? 0) + 1)
@@ -596,11 +545,7 @@ export function heatmap(opts: { startDate?: string; endDate?: string } = {}): Ar
   const result: Array<{ date: string; hour: number; count: number }> = []
   const cur = new Date(start)
   while (cur <= end) {
-<<<<<<< HEAD
     const dateStr = localDate(cur)
-=======
-    const dateStr = cur.toISOString().slice(0, 10)
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
     for (let h = 0; h < 24; h++) {
       const key = `${dateStr}_${h}`
       result.push({ date: dateStr, hour: h, count: map.get(key) ?? 0 })
@@ -633,11 +578,7 @@ export function appUsage(opts: { startDate?: string; endDate?: string } = {}): A
   if (opts.startDate && opts.endDate) {
     rows = rows.filter(r => r.startedAt >= opts.startDate! && r.startedAt <= opts.endDate!)
   } else {
-<<<<<<< HEAD
     const todayStr = localDate(new Date())
-=======
-    const todayStr = new Date().toISOString().slice(0, 10)
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
     rows = rows.filter(r => r.startedAt.slice(0, 10) === todayStr)
   }
   const map = new Map<string, { durationSec: number; count: number; firstAt: string | null; lastAt: string | null }>()
@@ -656,7 +597,6 @@ export function appUsage(opts: { startDate?: string; endDate?: string } = {}): A
   return list.map(x => ({ ...x, share: total > 0 ? +(x.durationSec / total * 100).toFixed(1) : 0 }))
 }
 
-<<<<<<< HEAD
 // ============ 计划 ============
 export function listPlans(opts: { date: string }): PlanItem[] {
   const db = getDb()
@@ -702,8 +642,6 @@ export function deletePlan(id: string): void {
   save()
 }
 
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 // ============ 数据管理 ============
 export function exportAll(): DBSchema {
   return JSON.parse(JSON.stringify(getDb()))

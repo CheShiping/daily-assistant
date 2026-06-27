@@ -1,21 +1,13 @@
 <script setup lang="ts">
-<<<<<<< HEAD
 import { ref, onMounted, defineComponent, h, computed } from 'vue'
-=======
-import { ref, onMounted, defineComponent, h } from 'vue'
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 import { useRouter } from 'vue-router'
 const router = useRouter()
 import type { AppSettings } from '@/types'
 import {
   Loader2, CheckCircle2, XCircle, Eye, EyeOff,
   Settings as SettingsIcon, Camera, Brain, Database, Sparkles,
-<<<<<<< HEAD
   Trash2, Download, Upload, ChevronDown, Wand2, Languages, Clock,
   Shield, Bell, Keyboard, FlaskConical, Copy, Check, RefreshCw, Crown, Power
-=======
-  Trash2, Download, Upload, ChevronDown, Wand2, Languages, Clock
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 } from 'lucide-vue-next'
 
 // Switch 自定义控件
@@ -52,15 +44,12 @@ const testing = ref(false)
 const testResult = ref<{ ok: boolean; message: string } | null>(null)
 const excludedAppsText = ref('')
 
-<<<<<<< HEAD
 const privacyLevels = [
   { label: '宽松', value: 'loose', desc: '记录所有内容' },
   { label: '标准', value: 'standard', desc: '跳过敏感场景' },
   { label: '严格', value: 'strict', desc: '仅记录工作应用' }
 ]
 
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 const intervalOpen = ref(false)
 const screenshotIntervals = [
   { label: '1 分钟', value: 60 },
@@ -70,7 +59,6 @@ const screenshotIntervals = [
   { label: '20 分钟', value: 1200 }
 ]
 
-<<<<<<< HEAD
 // 截图运行状态（自动记录开关）
 const screenshotRunning = ref(false)
 
@@ -85,20 +73,14 @@ const apiToggling = ref(false)
 const apiTokenCopied = ref(false)
 const apiConfigCopied = ref(false)
 
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 async function load() {
   loading.value = true
   settings.value = await window.api.settings.get()
   excludedAppsText.value = (settings.value.excludedApps ?? []).join('\n')
-<<<<<<< HEAD
   apiPortDraft.value = settings.value.localApiPort || 8088
   loading.value = false
   refreshScreenshotStatus()
   refreshApiStatus()
-=======
-  loading.value = false
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 }
 
 async function save() {
@@ -160,7 +142,6 @@ function currentIntervalLabel() {
   return m < 1 ? `${s} 秒` : `${m} 分钟`
 }
 
-<<<<<<< HEAD
 // 自动记录开关
 async function refreshScreenshotStatus() {
   try {
@@ -191,20 +172,12 @@ async function clearData() {
   }
 }
 
-=======
-async function clearData() {
-  if (!confirm('确认清空所有本地数据？此操作不可恢复')) return
-  await window.api.dataManagement.clear()
-  alert('已清空')
-}
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 async function exportData() { await window.api.dataManagement.export() }
 async function importData() {
   const r = await window.api.dataManagement.import()
   if (r.ok) alert('导入成功')
 }
 
-<<<<<<< HEAD
 // 本地 API
 async function refreshApiStatus() {
   try {
@@ -283,8 +256,6 @@ async function copyText(text: string, flag: 'token' | 'config') {
   }
 }
 
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 onMounted(load)
 </script>
 
@@ -298,11 +269,7 @@ onMounted(load)
 
     <div v-else-if="settings" class="space-y-4">
 
-<<<<<<< HEAD
       <!-- 卡片 1：通用 -->
-=======
-      <!-- 通用 -->
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
       <section class="card overflow-hidden">
         <div class="px-5 pt-4 pb-2 text-sm font-semibold flex items-center gap-2">
           <SettingsIcon class="w-4 h-4 text-muted-foreground" /> 通用
@@ -318,7 +285,6 @@ onMounted(load)
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
-<<<<<<< HEAD
             <div class="text-sm font-medium">自动记录工作</div>
             <div class="text-xs text-muted-foreground mt-0.5">开启后定时截图并识别当前工作状态</div>
           </div>
@@ -350,16 +316,6 @@ onMounted(load)
       </section>
 
       <!-- 卡片 2：截图与记录 -->
-=======
-            <div class="text-sm font-medium">开机自启动</div>
-            <div class="text-xs text-muted-foreground mt-0.5">登录系统后自动运行</div>
-          </div>
-          <Switch :model-value="false" disabled />
-        </div>
-      </section>
-
-      <!-- 截图与记录 -->
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
       <section class="card overflow-hidden">
         <div class="px-5 pt-4 pb-2 text-sm font-semibold flex items-center gap-2">
           <Camera class="w-4 h-4 text-muted-foreground" /> 截图与记录
@@ -385,7 +341,6 @@ onMounted(load)
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
-<<<<<<< HEAD
             <div class="text-sm font-medium">视觉识别</div>
             <div class="text-xs text-muted-foreground mt-0.5">使用 AI 视觉模型分析截图内容</div>
           </div>
@@ -422,12 +377,6 @@ onMounted(load)
             <div class="text-xs text-muted-foreground mt-0.5">自动识别并跳过私人沟通、社交媒体等场景</div>
           </div>
           <Switch v-model="settings.sensitiveSceneSkip" @update:model-value="save" />
-=======
-            <div class="text-sm font-medium">截图保留</div>
-            <div class="text-xs text-muted-foreground mt-0.5">仅保留近 1 天未处理的历史</div>
-          </div>
-          <Switch :model-value="true" disabled />
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
@@ -448,7 +397,6 @@ onMounted(load)
             @change="save"
           ></textarea>
         </div>
-<<<<<<< HEAD
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
             <div class="text-sm font-medium">完成通知</div>
@@ -459,11 +407,6 @@ onMounted(load)
       </section>
 
       <!-- 卡片 3：AI 分析 -->
-=======
-      </section>
-
-      <!-- AI 分析 -->
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
       <section class="card overflow-hidden">
         <div class="px-5 pt-4 pb-2 text-sm font-semibold flex items-center gap-2">
           <Brain class="w-4 h-4 text-muted-foreground" /> AI 分析
@@ -514,7 +457,6 @@ onMounted(load)
           />
         </div>
         <div class="px-5 py-3 border-t">
-<<<<<<< HEAD
           <div class="text-sm font-medium mb-2">报告生成模型</div>
           <input v-model="settings.model" class="input w-full h-8 font-mono text-xs" @change="save" placeholder="如 gpt-4o、doubao-pro-32k" />
         </div>
@@ -522,15 +464,6 @@ onMounted(load)
           <div class="text-sm font-medium mb-2">截图分析模型</div>
           <input v-model="settings.visionModel" class="input w-full h-8 font-mono text-xs" @change="save" placeholder="如 gpt-4o、doubao-vision-pro" />
         </div>
-=======
-            <div class="text-sm font-medium mb-2">报告生成模型</div>
-            <input v-model="settings.model" class="input w-full h-8 font-mono text-xs" @change="save" placeholder="如 gpt-4o、doubao-pro-32k" />
-          </div>
-          <div class="px-5 py-3 border-t">
-            <div class="text-sm font-medium mb-2">截图分析模型</div>
-            <input v-model="settings.visionModel" class="input w-full h-8 font-mono text-xs" @change="save" placeholder="如 gpt-4o、doubao-vision-pro" />
-          </div>
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
         <div class="px-5 py-3 border-t">
           <div class="text-sm font-medium mb-2">自定义指令</div>
           <div class="text-xs text-muted-foreground mb-2">追加到报告生成系统提示词末尾</div>
@@ -541,7 +474,6 @@ onMounted(load)
             @change="save"
           ></textarea>
         </div>
-<<<<<<< HEAD
         <div class="px-5 py-3 border-t">
           <div class="text-sm font-medium mb-2">AI 记忆内容</div>
           <div class="text-xs text-muted-foreground mb-2">长期记住的工作背景（项目名、技术栈、协作方式等），生成报告时自动注入</div>
@@ -555,11 +487,6 @@ onMounted(load)
       </section>
 
       <!-- 卡片 4：数据管理 -->
-=======
-      </section>
-
-      <!-- 数据管理 -->
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
       <section class="card overflow-hidden">
         <div class="px-5 pt-4 pb-2 text-sm font-semibold flex items-center gap-2">
           <Database class="w-4 h-4 text-muted-foreground" /> 数据管理
@@ -582,7 +509,6 @@ onMounted(load)
             <Upload class="w-3 h-3" /> 导入
           </button>
         </div>
-<<<<<<< HEAD
         <div class="px-5 py-3 border-t">
           <div v-if="!clearConfirming" class="flex items-center gap-4">
             <div class="flex-1">
@@ -617,23 +543,6 @@ onMounted(load)
             <div class="text-xs text-muted-foreground mt-0.5">登录系统后自动运行（仅 Windows）</div>
           </div>
           <Switch :model-value="false" disabled />
-=======
-        <div class="px-5 py-3 flex items-center gap-4 border-t">
-          <div class="flex-1">
-            <div class="text-sm font-medium">清除历史数据</div>
-            <div class="text-xs text-destructive/70 mt-0.5">不可恢复，请谨慎操作</div>
-          </div>
-          <button class="btn-outline btn-sm text-destructive border-destructive/30 hover:bg-destructive/10 flex items-center gap-1" @click="clearData">
-            <Trash2 class="w-3 h-3" /> 删除
-          </button>
-        </div>
-      </section>
-
-      <!-- 定时日报 -->
-      <section class="card overflow-hidden">
-        <div class="px-5 pt-4 pb-2 text-sm font-semibold flex items-center gap-2">
-          <Sparkles class="w-4 h-4 text-muted-foreground" /> 定时日报
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
         </div>
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
@@ -654,7 +563,6 @@ onMounted(load)
             />
           </div>
         </div>
-<<<<<<< HEAD
         <div class="px-5 py-3 flex items-center gap-4 border-t">
           <div class="flex-1">
             <div class="text-sm font-medium">截图保留路径</div>
@@ -740,8 +648,6 @@ onMounted(load)
             <p class="text-[11px] text-muted-foreground mt-1.5">复制后可粘贴给外部 Agent 或脚本，包含 Base URL、Token 和端点说明</p>
           </div>
         </div>
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
       </section>
 
       <div class="text-xs text-muted-foreground text-center pb-4 pt-2">

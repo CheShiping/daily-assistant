@@ -1,14 +1,8 @@
 <script setup lang="ts">
-<<<<<<< HEAD
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { formatDate } from '@/lib/utils'
 import { Loader2, Calendar, Activity, Sparkles, RefreshCw } from 'lucide-vue-next'
-=======
-import { ref, computed, onMounted, watch } from 'vue'
-import { formatDate } from '@/lib/utils'
-import { Loader2, Calendar, Activity } from 'lucide-vue-next'
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 
 interface HeatCell {
   date: string
@@ -16,18 +10,14 @@ interface HeatCell {
   count: number
 }
 
-<<<<<<< HEAD
 const router = useRouter()
 
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 const loading = ref(true)
 const cells = ref<HeatCell[]>([])
 const startDate = ref('')
 const endDate = ref('')
 const showRecentOnly = ref(false) // 显示前两日开关
 
-<<<<<<< HEAD
 // AI 洞察
 const insightText = ref('')
 const insightLoading = ref(false)
@@ -35,8 +25,6 @@ const insightCache = new Map<string, string>()
 let insightUnsub: (() => void) | null = null
 let insightStatusUnsub: (() => void) | null = null
 
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 function initRange() {
   const end = new Date()
   const start = new Date()
@@ -63,7 +51,6 @@ async function load() {
     endDate: e.toISOString()
   })
   loading.value = false
-<<<<<<< HEAD
   loadInsight()
 }
 
@@ -114,8 +101,6 @@ function refreshInsight() {
   insightCache.delete(insightCacheKey())
   insightText.value = ''
   loadInsight()
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 }
 
 // 监听开关变化重新加载
@@ -149,32 +134,22 @@ function weekOf(dateStr: string): string {
 function cellColor(count: number): string {
   if (count === 0) return 'hsl(var(--muted))'
   const ratio = maxCount.value === 0 ? 0 : count / maxCount.value
-<<<<<<< HEAD
   if (ratio < 0.2) return 'hsl(142 40% 85%)'
   if (ratio < 0.4) return 'hsl(142 55% 70%)'
   if (ratio < 0.6) return 'hsl(142 65% 55%)'
   if (ratio < 0.8) return 'hsl(142 71% 45%)'
   return 'hsl(142 71% 35%)'
-=======
-  if (ratio < 0.25) return 'hsl(142 60% 75%)'
-  if (ratio < 0.5) return 'hsl(142 65% 60%)'
-  if (ratio < 0.75) return 'hsl(142 71% 48%)'
-  return 'hsl(142 71% 38%)'
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 }
 
 onMounted(() => {
   initRange()
   load()
 })
-<<<<<<< HEAD
 
 onUnmounted(() => {
   insightUnsub?.()
   insightStatusUnsub?.()
 })
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
 </script>
 
 <template>
@@ -241,11 +216,7 @@ onUnmounted(() => {
           <div
             v-for="(c, h) in counts"
             :key="h"
-<<<<<<< HEAD
             class="flex-1 h-7 rounded-[3px] transition-all duration-150 hover:scale-125 hover:ring-2 hover:ring-primary/50 cursor-pointer"
-=======
-            class="flex-1 h-6 rounded-sm transition-transform hover:scale-110 hover:ring-1 hover:ring-primary cursor-pointer"
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
             :style="{ backgroundColor: cellColor(c) }"
             :title="`${date} ${h.toString().padStart(2, '0')}:00 · ${c} 条记录`"
           ></div>
@@ -263,7 +234,6 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-<<<<<<< HEAD
 
     <!-- AI 洞察 -->
     <div v-if="!loading && cells.length > 0" class="card p-4 mt-4">
@@ -290,7 +260,5 @@ onUnmounted(() => {
         @click="router.push('/agent')"
       >展开详细分析 →</button>
     </div>
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   </div>
 </template>

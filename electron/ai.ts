@@ -237,11 +237,8 @@ export interface GenerateReportInput {
   templateBody?: string
   customInstruction?: string
   memoryContent?: string
-<<<<<<< HEAD
   clustering?: 'timeline' | 'category' | 'project'
   plans?: Array<{ text: string; completed: boolean }>
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   records: Array<{ startedAt: string; summary: string; category?: string }>
   appUsageSummary?: Array<{ appName: string; durationMinutes: number }>
 }
@@ -267,7 +264,6 @@ export async function generateReport(
       lines.push(`- ${a.appName}: ${a.durationMinutes} 分钟`)
     }
   }
-<<<<<<< HEAD
   // 聚类策略提示
   if (input.templateBody) {
     const clusteringHints: Record<string, string> = {
@@ -293,8 +289,6 @@ export async function generateReport(
     }
     lines.push('请在报告中对比"计划 vs 实际"，给出完成情况说明。')
   }
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
   if (input.templateBody) {
     lines.push(`【报告模板】（仅作为排版格式参考，不要照抄内容）`)
     lines.push(input.templateBody)
@@ -441,7 +435,6 @@ export function emitToRenderer(channel: string, ...args: unknown[]) {
     win.webContents.send(channel, ...args)
   }
 }
-<<<<<<< HEAD
 
 // ============ AI 洞察 ============
 export async function generateInsight(
@@ -553,5 +546,3 @@ export async function chat(
     onDone(full)
   } catch (e) { onError(e as Error) }
 }
-=======
->>>>>>> b49573f6224ac59a40f76a658d30cf27cdcad869
